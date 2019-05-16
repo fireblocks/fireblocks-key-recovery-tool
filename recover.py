@@ -1,7 +1,6 @@
 import sys
 import hashlib
 import json
-import helper
 import uuid
 import struct
 from curve import secp256k1
@@ -9,6 +8,7 @@ from point import Point
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Cipher import AES
+from helper import encode_base58_checksum
 from zipfile import ZipFile
 
 def help():
@@ -37,22 +37,6 @@ def decrypt_mobile_private_key(recovery_password, user_id, encrypted_key):
     prv_key = unpad(cipher.decrypt(encrypted_key))
     return prv_key
 
-
-def key_to_extended_key(key, chain_code, is_pub):
-    if is_pub:
-        extended_key = (0x0488B21E).to_bytes(4, byteorder='big') # prefix
-    else:
-        extended_key = (0x0488ADE4).to_bytes(4, byteorder='big') # prefix
-    extended_key += bytes(1) # depth
-    extended_key += bytes(4) # fingerprint
-    extended_key += bytes(4) # child number
-    extended_key += chain_code # chain code
-
-    if not is_pub:
-        extended_key += bytes(1)
-    extended_key += key
-    return extended_key
-
 def get_player_id(key_id, cosigner_id, is_cloud):
     if is_cloud:
         key_id_first_dword = uuid.UUID(key_id).int.to_bytes(16, 'big')[0:4]
@@ -76,6 +60,21 @@ def lagrange_coefficient(my_id, ids, field):
         tmp = (tmp * id) % field
         coefficient *= tmp
     return coefficient
+
+def encode_extended_key(key, chain_code, is_pub):
+    if is_pub:
+        extended_key = (0x0488B21E).to_bytes(4, byteorder='big') # prefix
+    else:
+        extended_key = (0x0488ADE4).to_bytes(4, byteorder='big') # prefix
+    extended_key += bytes(1) # depth
+    extended_key += bytes(4) # fingerprint
+    extended_key += bytes(4) # child number
+    extended_key += chain_code # chain code
+
+    if not is_pub:
+        extended_key += bytes(1)
+    extended_key += key
+    return extended_key
 
 def main():
     privkey = 0
@@ -119,9 +118,8 @@ def main():
         privkey = (privkey + value * lagrange_coefficient(key, players_data.keys(), secp256k1.q)) % secp256k1.q
 
     pubkey = secp256k1.G * privkey
-
     pub = pubkey.serialize()
-
+    
     if (metadata_public_key != pub):
         print("ERROR: metadata.json public key doesn't metch the calculated one")
         exit(-1) 
@@ -131,8 +129,8 @@ def main():
         exit(-1)
     
     if "--prv" in sys.argv:
-        print("expriv:\t" + helper.encode_base58_checksum(key_to_extended_key(privkey.to_bytes(32, byteorder='big'), chain_code, False)))
-    print("expub:\t" + helper.encode_base58_checksum(key_to_extended_key(bytes.fromhex(pub), chain_code, True)))
+        print("expriv:\t" + encode_base58_checksum(encode_extended_key(privkey.to_bytes(32, byteorder='big'), chain_code, False)))
+    print("expub:\t" + encode_base58_checksum(encode_extended_key(bytes.fromhex(pub), chain_code, True)))
 
 if __name__== "__main__" :
     main()
