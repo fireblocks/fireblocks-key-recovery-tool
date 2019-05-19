@@ -1,6 +1,15 @@
 import sys
 import recover
 
+def help():
+    msg = """usage: fb_recover_keys.py <<backup zip pathname>> <<rsa key file path>> <<user recovery passphrase>> <options>
+
+Options:
+--prv - reveal private key. Otherwise only the public address of the
+--help (-h) - print this message    """
+
+    print(msg)
+
 def main():
     if len(sys.argv) < 4:
         help()
