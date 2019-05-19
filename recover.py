@@ -1,4 +1,3 @@
-import sys
 import hashlib
 import json
 import uuid
@@ -11,16 +10,7 @@ from Crypto.Cipher import AES
 from helper import encode_base58_checksum
 from zipfile import ZipFile
 
-def help():
-    msg = """usage: fb_recover_keys.py <<backup zip pathname>> <<rsa key file path>> <<user recovery passphrase>> <options>
-
-Options:
---prv - reveal private key. Otherwise only the public address of the
---help (-h) - print this message    """
-
-    print(msg)
-
-def unpad(text, k = 16):
+def _unpad(text, k = 16):
     nl = len(text)
     val = int(text[-1])
     if val > k:
@@ -34,7 +24,7 @@ def decrypt_mobile_private_key(recovery_password, user_id, encrypted_key):
     wrap_key = hashlib.pbkdf2_hmac("sha1", recovery_password, user_id, 10000, 32)
     iv = chr(0) * 16
     cipher = AES.new(wrap_key, AES.MODE_CBC, iv)
-    prv_key = unpad(cipher.decrypt(encrypted_key))
+    prv_key = _unpad(cipher.decrypt(encrypted_key))
     return prv_key
 
 def get_player_id(key_id, cosigner_id, is_cloud):
@@ -47,7 +37,7 @@ def get_player_id(key_id, cosigner_id, is_cloud):
         player_id = struct.unpack("Q", bytes(cosigner_prefix) + struct.pack("h", 0))[0]
     return player_id
 
-def prime_mod_inverse(x, p):
+def _prime_mod_inverse(x, p):
     return pow(x, p-2, p)
 
 def lagrange_coefficient(my_id, ids, field):
@@ -56,41 +46,23 @@ def lagrange_coefficient(my_id, ids, field):
         if id == my_id:
             continue
 
-        tmp = prime_mod_inverse((id - my_id) % field, field)
+        tmp = _prime_mod_inverse((id - my_id) % field, field)
         tmp = (tmp * id) % field
         coefficient *= tmp
     return coefficient
 
-def encode_extended_key(key, chain_code, is_pub):
-    if is_pub:
-        extended_key = (0x0488B21E).to_bytes(4, byteorder='big') # prefix
-    else:
-        extended_key = (0x0488ADE4).to_bytes(4, byteorder='big') # prefix
-    extended_key += bytes(1) # depth
-    extended_key += bytes(4) # fingerprint
-    extended_key += bytes(4) # child number
-    extended_key += chain_code # chain code
-
-    if not is_pub:
-        extended_key += bytes(1)
-    extended_key += key
-    return extended_key
-
-def main():
+def restore_key_and_chaincode(zip_path, private_pem_path, passphrase):
     privkey = 0
     chain_code = None
     key_id = None
     metadata_public_key = None
     players_data = {}
 
-    if len(sys.argv) < 4:
-        help()
-        exit(0)
-    with open(sys.argv[2], 'r') as _file:
+    with open(private_pem_path, 'r') as _file:
         key_pem = _file.read()
     key = RSA.importKey(key_pem)
     cipher = PKCS1_OAEP.new(key)
-    with ZipFile(sys.argv[1], 'r') as zipfile:
+    with ZipFile(zip_path, 'r') as zipfile:
         if "metadata.json" not in zipfile.namelist():
             print("ERROR: backup zip doesn't contain metadata.json")
             exit(-1) 
@@ -106,7 +78,7 @@ def main():
                     if obj["keyId"] != key_id:
                         print("ERROR: mobile keyId confilicts with metadata.json")
                         exit(-1)
-                    data = decrypt_mobile_private_key(sys.argv[3].encode(), obj["userId"].encode(), bytes.fromhex(obj["encryptedKey"]))
+                    data = decrypt_mobile_private_key(passphrase.encode(), obj["userId"].encode(), bytes.fromhex(obj["encryptedKey"]))
                     players_data[get_player_id(key_id, obj["deviceId"], False)] = int.from_bytes(data, byteorder='big')
                 elif name == "metadata.json":
                     continue
@@ -123,14 +95,43 @@ def main():
     if (metadata_public_key != pub):
         print("ERROR: metadata.json public key doesn't metch the calculated one")
         exit(-1) 
-    
-    if (not chain_code or len(chain_code) != 32):
-        print("ERROR: metadata.json doesn't contain valid chain code")
-        exit(-1)
-    
-    if "--prv" in sys.argv:
-        print("expriv:\t" + encode_base58_checksum(encode_extended_key(privkey.to_bytes(32, byteorder='big'), chain_code, False)))
-    print("expub:\t" + encode_base58_checksum(encode_extended_key(bytes.fromhex(pub), chain_code, True)))
+    return privkey, chain_code
 
-if __name__== "__main__" :
-    main()
+def get_public_key(private_key):
+    privkey = private_key
+    if type(private_key) != int:
+        privkey = int.from_bytes(private_key, byteorder='big')
+    pubkey = secp256k1.G * privkey
+    return pubkey.serialize()
+
+def restore_private_key(zip_path, private_pem_path, passphrase):
+    return restore_key_and_chaincode(zip_path, private_pem_path, passphrase)[0]
+
+def restore_chaincode(zip_path):
+    with ZipFile(zip_path, 'r') as zipfile:
+        if "metadata.json" not in zipfile.namelist():
+            print("ERROR: backup zip doesn't contain metadata.json")
+            exit(-1) 
+        with zipfile.open("metadata.json") as file:
+            obj = json.loads(file.read())
+            return bytes.fromhex(obj["chainCode"])
+
+def encode_extended_key(key, chain_code, is_pub):
+    if type(key) == int:
+        key = key.to_bytes(32, byteorder='big')
+    elif type(key) == str:
+        key = bytes.fromhex(key)
+    
+    if is_pub:
+        extended_key = (0x0488B21E).to_bytes(4, byteorder='big') # prefix
+    else:
+        extended_key = (0x0488ADE4).to_bytes(4, byteorder='big') # prefix
+    extended_key += bytes(1) # depth
+    extended_key += bytes(4) # fingerprint
+    extended_key += bytes(4) # child number
+    extended_key += chain_code # chain code
+
+    if not is_pub:
+        extended_key += bytes(1)
+    extended_key += key
+    return encode_base58_checksum(extended_key)
