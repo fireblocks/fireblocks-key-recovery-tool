@@ -2,7 +2,7 @@ import pytest
 import sys
 
 sys.path.append("..")
-import recover
+from utils import recover
 
 
 def test_recovery():

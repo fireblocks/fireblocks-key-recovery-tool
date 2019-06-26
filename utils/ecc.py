@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from io import BytesIO
 from random import randint
 from unittest import TestCase
@@ -5,7 +7,7 @@ from unittest import TestCase
 import hashlib
 import hmac
 
-from helper import encode_base58_checksum, hash160
+from .helper import encode_base58_checksum, hash160
 
 
 class FieldElement:

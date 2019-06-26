@@ -1,5 +1,9 @@
+# -*- coding: utf-8 -*-
+
 class Curve:
-    """Representation of an elliptic curve.
+
+    """
+    Representation of an elliptic curve.
 
     Defines a group for  the arithmetic operations of point addition and scalar multiplication.
     Currently only curves defined via the equation :math:`y^2 \equiv x^3 + ax + b \pmod{p}` are
@@ -13,10 +17,13 @@ class Curve:
         |  q (long): The order of the base point of the curve.
         |  oid (long): The object identifier of the curve.
     """
+
     _oid_lookup = {}  # a lookup table for getting curve instances by their object identifier
 
     def __init__(self, name, p, a, b, q, gx, gy, oid=None):
-        """Initialize the parameters of an elliptic curve.
+
+        """
+        Initialize the parameters of an elliptic curve.
 
         WARNING: Do not generate your own parameters unless you know what you are doing or you could
         generate a curve severely less secure than you think. Even then, consider using a
@@ -35,6 +42,7 @@ class Curve:
             |  gy (long): The y coordinate of the base point of the curve.
             |  oid (str): The object identifier of the curve.
         """
+
         self.name = name
         self.p = p
         self.a = a
@@ -50,11 +58,17 @@ class Curve:
 
     @classmethod
     def get_curve_by_oid(cls, oid):
-        """Get a curve via it's object identifier."""
+        
+        """
+        Get a curve via it's object identifier.
+        """
+
         return cls._oid_lookup.get(oid, None)
 
     def is_point_on_curve(self, P):
-        """ Check if a point lies on this curve.
+
+        """
+        Check if a point lies on this curve.
 
         The check is done by evaluating the curve equation :math:`y^2 \equiv x^3 + ax + b \pmod{p}`
         at the given point :math:`(x,y)` with this curve's domain parameters :math:`(a, b, p)`. If
@@ -67,13 +81,16 @@ class Curve:
         Returns:
             bool: :code:`True` if the point lies on this curve, otherwise :code:`False`.
         """
+
         x, y, = P[0], P[1]
         left = y * y
         right = (x * x * x) + (self.a * x) + self.b
         return (left - right) % self.p == 0
 
     def evaluate(self, x):
-        """ Evaluate the elliptic curve polynomial at 'x'
+ 
+        """
+        Evaluate the elliptic curve polynomial at 'x'
 
         Args:
             x (int): The position to evaluate the polynomial at
@@ -81,17 +98,21 @@ class Curve:
         Returns:
             int: the value of :math:`(x^3 + ax + b) \bmod{p}`
         """
+
         return (x ** 3 + self.a * x + self.b) % self.p
 
     @property
     def G(self):
-        """The base point of the curve.
+
+        """
+        The base point of the curve.
 
         For the purposes of ECDSA this point is multiplied by a private key to obtain the
         corresponding public key. Make a property to avoid cyclic dependency of Point on Curve
         (a point lies on a curve) and Curve on Point (curves have a base point).
         """
-        from point import Point
+
+        from .point import Point
         return Point(self.gx, self.gy, self)
 
 

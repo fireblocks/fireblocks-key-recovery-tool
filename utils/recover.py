@@ -1,13 +1,15 @@
+# -*- coding: utf-8 -*-
+
 import hashlib
 import json
 import uuid
 import struct
-from curve import secp256k1
-from point import Point
+from .curve import secp256k1
+from .point import Point
+from .helper import encode_base58_checksum
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Cipher import AES
-from helper import encode_base58_checksum
 from zipfile import ZipFile
 
 def _unpad(text, k = 16):

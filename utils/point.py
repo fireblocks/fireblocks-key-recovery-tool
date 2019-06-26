@@ -1,5 +1,6 @@
-from curve import secp256k1
+# -*- coding: utf-8 -*-
 
+from .curve import secp256k1
 
 class CurveMismatchError(Exception):
     def __init__(self, curve1, curve2):
@@ -8,7 +9,9 @@ class CurveMismatchError(Exception):
 
 
 class Point:
-    """Representation of a point on an elliptic curve.
+    
+    """
+    Representation of a point on an elliptic curve.
 
     Attributes:
         |  x (long): The x coordinate of the point.
@@ -17,7 +20,9 @@ class Point:
     """
 
     def __init__(self, x, y, curve=secp256k1):
-        """Initialize a point on an elliptic curve.
+    
+        """
+        Initialize a point on an elliptic curve.
 
         The x and y parameters must satisfy the equation :math:`y^2 \equiv x^3 + ax + b \pmod{p}`,
         where a, b, and p are attributes of the curve parameter.
@@ -51,16 +56,21 @@ class Point:
         return self.x == other.x and self.y == other.y and self.curve is other.curve
 
     def __fe_div(self, x, y):
-        # self.num and other.num are the actual values
-        # self.prime is what we need to mod against
-        # use fermat's little theorem:
-        # self.num**(p-1) % p == 1
-        # this means:
-        # 1/n == pow(n, p-2, p)
+        
+        """
+            self.num and other.num are the actual values
+            self.prime is what we need to mod against
+            use fermat's little theorem:
+            self.num**(p-1) % p == 1
+            this means:
+            1/n == pow(n, p-2, p)
+        """
         return (x * pow(y, self.curve.p - 2, self.curve.p)) % self.curve.p
 
     def __add__(self, other):
-        """Add two points on the same elliptic curve.
+        
+        """
+        Add two points on the same elliptic curve.
 
         Args:
             | self (:class:`Point`): a point :math:`P` on the curve
@@ -94,7 +104,9 @@ class Point:
             return Point(x, y, self.curve)
 
     def __radd__(self, other):
-        """Add two points on the same elliptic curve.
+        
+        """
+        Add two points on the same elliptic curve.
 
         Args:
             | self (:class:`Point`): a point :math:`P` on the curve
@@ -106,7 +118,9 @@ class Point:
         return self.__add__(other)
 
     def __sub__(self, other):
-        """Subtract two points on the same elliptic curve.
+        
+        """
+        Subtract two points on the same elliptic curve.
 
         Args:
             | self (:class:`Point`): a point :math:`P` on the curve
@@ -124,7 +138,9 @@ class Point:
         return self.__add__(negative)
 
     def __mul__(self, scalar):
-        """Multiply a :class:`Point` on an elliptic curve by an integer.
+        
+        """
+        Multiply a :class:`Point` on an elliptic curve by an integer.
 
         Args:
             | self (:class:`Point`): a point :math:`P` on the curve
@@ -152,7 +168,9 @@ class Point:
             return result
 
     def __rmul__(self, scalar):
-        """Multiply a :class:`Point` on an elliptic curve by an integer.
+        
+        """
+        Multiply a :class:`Point` on an elliptic curve by an integer.
 
         Args:
             | self (:class:`Point`): a point :math:`P` on the curve
@@ -165,7 +183,9 @@ class Point:
         return self.__mul__(scalar)
 
     def __neg__(self):
-        """Return the negation of a :class:`Point` i.e. the points reflection over the x-axis.
+        
+        """
+        Return the negation of a :class:`Point` i.e. the points reflection over the x-axis.
 
         Args:
             | self (:class:`Point`): a point :math:`P` on the curve
@@ -173,13 +193,16 @@ class Point:
         Returns:
             :class:`Point`: A point :math:`R = (P_x, -P_y)`
         """
+        
         if self == self.IDENTITY_ELEMENT:
             return self
 
         return Point(self.x, -self.y % self.curve.p, self.curve)
 
     def serialize(self, compressed = True):
-        """Encodes a Point object to a octet string
+        
+        """
+        Encodes a Point object to a octet string
         """
 
         if self == self.IDENTITY_ELEMENT:
@@ -197,7 +220,9 @@ class Point:
     
     @staticmethod
     def deserialize(pointStr, curve=secp256k1):
-        """Return a :class:`Point` represented by the string pointStr
+        
+        """
+        Return a :class:`Point` represented by the string pointStr
 
         Args:
             | pointStr (:class:`String`): a string representation of the point

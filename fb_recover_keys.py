@@ -1,31 +1,42 @@
-import sys
-import recover
+# -*- coding: utf-8 -*-
 
-def help():
-    msg = """usage: fb_recover_keys.py <<backup zip pathname>> <<rsa key file path>> <<user recovery passphrase>> <options>
-
-Options:
---prv - reveal private key. Otherwise only the public address of the
---help (-h) - print this message    """
-
-    print(msg)
+import os
+from utils import recover
+import argparse
+import getpass
 
 def main():
-    if len(sys.argv) < 4:
-        help()
-        exit(0)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('backup', help='Backup zip file')
+    parser.add_argument('key', help='RSA key file')
+    parser.add_argument('--prv', '-p', default=False,
+                        action='store_const', const=True,
+                        help='Reveal private key')
+    args = parser.parse_args()
+
+    if not os.path.exists(args.backup):
+        print('Backupfile: {} not found'.format(args.backup))
+        exit(- 1)
+    if not os.path.exists(args.key):
+        print('RSA key: {} not found'.format(args.key))
+        exit(-1)
     
-    privkey, chaincode = recover.restore_key_and_chaincode(sys.argv[1], sys.argv[2], sys.argv[3])
-    
+    passphrase = getpass.getpass(prompt='Please enter user recovery passphrase:')
+
+    privkey, chaincode = recover.restore_key_and_chaincode(
+        args.backup, args.key, passphrase)
+
     if (not chaincode or len(chaincode) != 32):
         print("ERROR: metadata.json doesn't contain valid chain code")
         exit(-1)
-    
+
     pub = recover.get_public_key(privkey)
 
-    if "--prv" in sys.argv:
+    if args.prv:
         print("expriv:\t" + recover.encode_extended_key(privkey, chaincode, False))
+        
     print("expub:\t" + recover.encode_extended_key(pub, chaincode, True))
 
-if __name__== "__main__" :
+if __name__ == "__main__" :
     main()
