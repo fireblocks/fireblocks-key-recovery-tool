@@ -24,7 +24,7 @@ def _unpad(text, k = 16):
 
 def decrypt_mobile_private_key(recovery_password, user_id, encrypted_key):
     wrap_key = hashlib.pbkdf2_hmac("sha1", recovery_password, user_id, 10000, 32)
-    iv = chr(0) * 16
+    iv = bytes(chr(0) * 16, 'utf-8')
     cipher = AES.new(wrap_key, AES.MODE_CBC, iv)
     prv_key = _unpad(cipher.decrypt(encrypted_key))
     return prv_key
@@ -53,7 +53,7 @@ def lagrange_coefficient(my_id, ids, field):
         coefficient *= tmp
     return coefficient
 
-def restore_key_and_chaincode(zip_path, private_pem_path, passphrase):
+def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=None):
     privkey = 0
     chain_code = None
     key_id = None
@@ -62,7 +62,7 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase):
 
     with open(private_pem_path, 'r') as _file:
         key_pem = _file.read()
-    key = RSA.importKey(key_pem)
+    key = RSA.importKey(key_pem, passphrase=key_pass)
     cipher = PKCS1_OAEP.new(key)
     with ZipFile(zip_path, 'r') as zipfile:
         if "metadata.json" not in zipfile.namelist():
@@ -106,8 +106,8 @@ def get_public_key(private_key):
     pubkey = secp256k1.G * privkey
     return pubkey.serialize()
 
-def restore_private_key(zip_path, private_pem_path, passphrase):
-    return restore_key_and_chaincode(zip_path, private_pem_path, passphrase)[0]
+def restore_private_key(zip_path, private_pem_path, passphrase, key_pass=None):
+    return restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass)[0]
 
 def restore_chaincode(zip_path):
     with ZipFile(zip_path, 'r') as zipfile:
