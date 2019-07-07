@@ -11,7 +11,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('backup', help='Backup zip file')
     parser.add_argument('key', help='RSA key file')
-    parser.add_argument('--priv', default=False,
+    parser.add_argument('--prv', default=False,
                         action='store_const', const=True,
                         help='Reveal private key')
     args = parser.parse_args()
@@ -23,11 +23,11 @@ def main():
         print('RSA key: {} not found'.format(args.key))
         exit(-1)
     
-    passphrase = getpass.getpass(prompt='Please enter user recovery passphrase:')
+    passphrase = getpass.getpass(prompt='Please enter mobile recovery passphrase:')
 
     with open(args.key, 'r') as _key:
         if _key.readlines()[1].find('ENCRYPTED'):
-            key_pass = getpass.getpass(prompt='Please enter user private key passphrase:')
+            key_pass = getpass.getpass(prompt='Please enter recovery RSA private key passphrase:')
         else:
             key_pass = None
 
@@ -41,9 +41,9 @@ def main():
     pub = recover.get_public_key(privkey)
 
     if args.priv:
-        print("expriv:\t" + recover.encode_extended_key(privkey, chaincode, False))
+        print("XPRV:\t" + recover.encode_extended_key(privkey, chaincode, False))
         
-    print("expub:\t" + recover.encode_extended_key(pub, chaincode, True))
+    print("XPUB:\t" + recover.encode_extended_key(pub, chaincode, True))
 
 if __name__ == "__main__" :
     main()

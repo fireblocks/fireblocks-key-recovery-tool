@@ -33,4 +33,4 @@
 
 #### Run the utility locally
 
-* ./fb_recover_keys.py `<backup file> <private key>` --prv
+* ./fb_recover_keys.py `<backup zip file> <RSA recovery private key>` --prv
