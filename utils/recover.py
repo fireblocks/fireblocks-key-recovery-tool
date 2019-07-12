@@ -78,7 +78,7 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
                 if name == "MOBILE":
                     obj = json.loads(file.read())
                     if obj["keyId"] != key_id:
-                        print("ERROR: mobile keyId confilicts with metadata.json")
+                        print("ERROR: mobile keyId conflicts with metadata.json")
                         exit(-1)
                     data = decrypt_mobile_private_key(passphrase.encode(), obj["userId"].encode(), bytes.fromhex(obj["encryptedKey"]))
                     players_data[get_player_id(key_id, obj["deviceId"], False)] = int.from_bytes(data, byteorder='big')
@@ -95,7 +95,7 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
     pub = pubkey.serialize()
     
     if (metadata_public_key != pub):
-        print("ERROR: metadata.json public key doesn't metch the calculated one")
+        print("ERROR: metadata.json public key doesn't match the calculated one")
         exit(-1) 
     return privkey, chain_code
 

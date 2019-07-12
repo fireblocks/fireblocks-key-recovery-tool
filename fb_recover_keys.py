@@ -6,6 +6,7 @@ from utils import recover
 import argparse
 import getpass
 import sys
+from termcolor import colored
 
 def query_yes_no(question, default="yes"):
     """Ask a yes/no question via input() and return their answer.
@@ -81,7 +82,7 @@ Be sure you are in a private location and no one can see your screen.'''
         if show_xprv:
             print("XPRV:\t" + recover.encode_extended_key(privkey, chaincode, False))
         
-    print("XPUB:\t" + recover.encode_extended_key(pub, chaincode, True))
+    print("XPUB:\t%s\t%s" % (recover.encode_extended_key(pub, chaincode, True), colored("Verified!","green")))
 
 if __name__ == "__main__" :
     main()
