@@ -208,15 +208,22 @@ class Point:
         if self == self.IDENTITY_ELEMENT:
             return "00"
 
+        x = hex(self.x)[2:]
+        if(len(x) % 2 == 1):
+            x = "0" + x
+
         if compressed:
             if self.y % 2:
                 prefix = "03"
             else:
                 prefix = "02"
 
-            return prefix + hex(self.x)[2:]
+            return prefix + x
         else:
-            return "04" + hex(self.x)[2:] + hex(self.y)[2:]
+            y = hex(self.y)[2:]
+            if(len(y) % 2 == 1):
+                y = "0" + y
+            return "04" + x + y
     
     @staticmethod
     def deserialize(pointStr, curve=secp256k1):
