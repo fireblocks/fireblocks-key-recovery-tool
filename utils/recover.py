@@ -95,7 +95,7 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
     pub = pubkey.serialize()
     
     if (metadata_public_key != pub):
-        print("ERROR: metadata.json public key doesn't match the calculated one")
+        print("ERROR: metadata.json public key doesn't match the calculated one (%s != %s)" % (metadata_public_key, pub))
         exit(-1) 
     return privkey, chain_code
 
