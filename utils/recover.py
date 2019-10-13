@@ -38,10 +38,10 @@ class RecoveryErrorKeyIdNoMatch(Exception):
     def __str__(self):
         return "ERROR: metadata.json key id doesn't match the calculated one (%s != %s)" % (self._metadata_key_id, self._key_id)
 
-class RecoveryErrorIncorrectMobilePassphrase(Exception):
+class RecoveryErrorMobileKeyDecrypt(Exception):
     pass
 
-class RecoveryErrorIncorrectRSAPassphrase(Exception):
+class RecoveryErrorRSAKeyImport(Exception):
     pass
 
 def _unpad(text, k = 16):
@@ -97,7 +97,7 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
     try:
         key = RSA.importKey(key_pem, passphrase=key_pass)
     except ValueError:
-        raise RecoveryErrorIncorrectRSAPassphrase()
+        raise RecoveryErrorRSAKeyImport()
 
     cipher = PKCS1_OAEP.new(key)
     with ZipFile(zip_path, 'r') as zipfile:
@@ -117,7 +117,7 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
                     try:
                         data = decrypt_mobile_private_key(passphrase.encode(), obj["userId"].encode(), bytes.fromhex(obj["encryptedKey"]))
                     except ValueError:
-                        raise RecoveryErrorIncorrectMobilePassphrase()
+                        raise RecoveryErrorMobileKeyDecrypt()
                     players_data[get_player_id(key_id, obj["deviceId"], False)] = int.from_bytes(data, byteorder='big')
                 elif name == "metadata.json":
                     continue

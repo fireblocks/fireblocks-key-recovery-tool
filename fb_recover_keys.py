@@ -68,11 +68,11 @@ def main():
     try:
         privkey, chaincode = recover.restore_key_and_chaincode(
             args.backup, args.key, passphrase, key_pass)
-    except recover.RecoveryErrorIncorrectMobilePassphrase:
-        print(colored("The mobile recovery passphrase is incorrect.","cyan"))
+    except recover.RecoveryErrorMobileKeyDecrypt:
+        print(colored("Failed to decrypt mobile Key. " + colored("Please make sure you have the mobile passphrase entered correctly.", attrs = ["bold"]), "cyan")) 
         exit(-1)
-    except recover.RecoveryErrorIncorrectRSAPassphrase:
-        print(colored("The RSA passphrase is incorrect.", "cyan")) 
+    except recover.RecoveryErrorRSAKeyImport:
+        print(colored("Failed to import RSA Key. " + colored("Please make sure you have the RSA passphrase entered correctly.", attrs = ["bold"]), "cyan")) 
         exit(-1)
 
     if (not chaincode or len(chaincode) != 32):
