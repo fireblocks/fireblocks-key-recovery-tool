@@ -51,10 +51,10 @@ def main():
     args = parser.parse_args()
 
     if not os.path.exists(args.backup):
-        print('Backupfile: {} not found'.format(args.backup))
+        print('Backupfile: {} not found.'.format(args.backup))
         exit(- 1)
     if not os.path.exists(args.key):
-        print('RSA key: {} not found'.format(args.key))
+        print('RSA key: {} not found.'.format(args.key))
         exit(-1)
     
     passphrase = getpass.getpass(prompt='Please enter mobile recovery passphrase:')
@@ -65,11 +65,18 @@ def main():
         else:
             key_pass = None
 
-    privkey, chaincode = recover.restore_key_and_chaincode(
-        args.backup, args.key, passphrase, key_pass)
+    try:
+        privkey, chaincode = recover.restore_key_and_chaincode(
+            args.backup, args.key, passphrase, key_pass)
+    except recover.RecoveryErrorIncorrectMobilePassphrase:
+        print(colored("The mobile recovery passphrase is incorrect.","cyan"))
+        exit(-1)
+    except recover.RecoveryErrorIncorrectRSAPassphrase:
+        print(colored("The RSA passphrase is incorrect.", "cyan")) 
+        exit(-1)
 
     if (not chaincode or len(chaincode) != 32):
-        print("ERROR: metadata.json doesn't contain valid chain code")
+        print(colored("metadata.json doesn't contain a valid chain code.", "cyan"))
         exit(-1)
 
     pub = recover.get_public_key(privkey)

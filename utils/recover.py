@@ -12,6 +12,38 @@ from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Cipher import AES
 from zipfile import ZipFile
 
+class RecoveryError(Exception):
+    pass
+
+class RecoveryErrorMetadataNotFound(Exception):
+    def __init__(self, zip_file_path):
+        self._zip_file_path = zip_file_path
+
+    def __str__(self):
+        return ("Backup zip %s doesn't contain metadata.json" % self._zip_file_path)
+
+class RecoveryErrorPublicKeyNoMatch(Exception):
+    def __init____(self, metadata_public_key, pub):
+        self._metadata_public_key = metadata_public_key
+        self._pub = pub
+
+    # def __str__(self):
+    #     return "metadata.json public key doesn't match the calculated one (%s != %s)" % (self._metadata_public_key, self._pub)
+
+class RecoveryErrorKeyIdNoMatch(Exception):
+    def __init__(self, metadata_key_id, key_id):
+        self._metadata_key_id = metadata_key_id
+        self._key_id = key_id
+
+    def __str__(self):
+        return "ERROR: metadata.json key id doesn't match the calculated one (%s != %s)" % (self._metadata_key_id, self._key_id)
+
+class RecoveryErrorIncorrectMobilePassphrase(Exception):
+    pass
+
+class RecoveryErrorIncorrectRSAPassphrase(Exception):
+    pass
+
 def _unpad(text, k = 16):
     nl = len(text)
     val = int(text[-1])
@@ -62,12 +94,15 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
 
     with open(private_pem_path, 'r') as _file:
         key_pem = _file.read()
-    key = RSA.importKey(key_pem, passphrase=key_pass)
+    try:
+        key = RSA.importKey(key_pem, passphrase=key_pass)
+    except ValueError:
+        raise RecoveryErrorIncorrectRSAPassphrase()
+
     cipher = PKCS1_OAEP.new(key)
     with ZipFile(zip_path, 'r') as zipfile:
         if "metadata.json" not in zipfile.namelist():
-            print("ERROR: backup zip doesn't contain metadata.json")
-            exit(-1) 
+            raise RecoveryErrorMetadataNotFound(zip_path)
         with zipfile.open("metadata.json") as file:
             obj = json.loads(file.read())
             chain_code = bytes.fromhex(obj["chainCode"])
@@ -78,9 +113,11 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
                 if name == "MOBILE":
                     obj = json.loads(file.read())
                     if obj["keyId"] != key_id:
-                        print("ERROR: mobile keyId conflicts with metadata.json")
-                        exit(-1)
-                    data = decrypt_mobile_private_key(passphrase.encode(), obj["userId"].encode(), bytes.fromhex(obj["encryptedKey"]))
+                        raise RecoveryErrorKeyIdNoMatch(obj["keyId"], key_id)
+                    try:
+                        data = decrypt_mobile_private_key(passphrase.encode(), obj["userId"].encode(), bytes.fromhex(obj["encryptedKey"]))
+                    except ValueError:
+                        raise RecoveryErrorIncorrectMobilePassphrase()
                     players_data[get_player_id(key_id, obj["deviceId"], False)] = int.from_bytes(data, byteorder='big')
                 elif name == "metadata.json":
                     continue
@@ -95,8 +132,8 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
     pub = pubkey.serialize()
     
     if (metadata_public_key != pub):
-        print("ERROR: metadata.json public key doesn't match the calculated one (%s != %s)" % (metadata_public_key, pub))
-        exit(-1) 
+        raise RecoveryErrorPublicKeyNoMatch(metadata_public_key, pub)
+    
     return privkey, chain_code
 
 def get_public_key(private_key):
@@ -112,8 +149,7 @@ def restore_private_key(zip_path, private_pem_path, passphrase, key_pass=None):
 def restore_chaincode(zip_path):
     with ZipFile(zip_path, 'r') as zipfile:
         if "metadata.json" not in zipfile.namelist():
-            print("ERROR: backup zip doesn't contain metadata.json")
-            exit(-1) 
+            raise RecoveryMetadataNotFound(zip_path)
         with zipfile.open("metadata.json") as file:
             obj = json.loads(file.read())
             return bytes.fromhex(obj["chainCode"])
