@@ -44,10 +44,11 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('backup', help='Backup zip file')
-    parser.add_argument('key', help='RSA key file')
+    parser.add_argument('key', help='RSA private key file')
     parser.add_argument('--prv', default=False,
                         action='store_const', const=True,
                         help='Reveal private key')
+    parser.add_argument('--mobile-key', help='mobile RSA private key file', default=None)
     args = parser.parse_args()
 
     if not os.path.exists(args.backup):
@@ -57,22 +58,36 @@ def main():
         print('RSA key: {} not found.'.format(args.key))
         exit(-1)
     
-    passphrase = getpass.getpass(prompt='Please enter mobile recovery passphrase:')
+    mobile_key_pass = None
+    passphrase = None
+
+    if args.mobile_key is None:
+        passphrase = getpass.getpass(prompt='Please enter mobile recovery passphrase:')
+    else:
+        with open(args.mobile_key, 'r') as _key:
+            if 'ENCRYPTED' in _key.readlines()[1]:
+                mobile_key_pass = getpass.getpass(prompt='Please enter mobile recovery RSA private key passphrase:')
 
     with open(args.key, 'r') as _key:
-        if _key.readlines()[1].find('ENCRYPTED'):
+        if 'ENCRYPTED' in _key.readlines()[1]:
             key_pass = getpass.getpass(prompt='Please enter recovery RSA private key passphrase:')
         else:
             key_pass = None
 
     try:
         privkey, chaincode = recover.restore_key_and_chaincode(
-            args.backup, args.key, passphrase, key_pass)
+            args.backup, args.key, passphrase, key_pass, args.mobile_key, mobile_key_pass)
     except recover.RecoveryErrorMobileKeyDecrypt:
         print(colored("Failed to decrypt mobile Key. " + colored("Please make sure you have the mobile passphrase entered correctly.", attrs = ["bold"]), "cyan")) 
         exit(-1)
     except recover.RecoveryErrorRSAKeyImport:
         print(colored("Failed to import RSA Key. " + colored("Please make sure you have the RSA passphrase entered correctly.", attrs = ["bold"]), "cyan")) 
+        exit(-1)
+    except recover.RecoveryErrorMobileRSAKeyImport:
+        print(colored("Failed to import mobile RSA Key. " + colored("Please make sure you have the RSA passphrase entered correctly.", attrs = ["bold"]), "cyan")) 
+        exit(-1)
+    except recover.RecoveryErrorMobileRSADecrypt:
+        print(colored("Failed to decrypt mobile Key. " + colored("Please make sure you have the mobile private key entered correctly.", attrs = ["bold"]), "cyan")) 
         exit(-1)
 
     if (not chaincode or len(chaincode) != 32):

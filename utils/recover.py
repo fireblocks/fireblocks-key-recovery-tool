@@ -10,6 +10,7 @@ from .helper import encode_base58_checksum
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Cipher import AES
+from Crypto.Hash import SHA256
 from zipfile import ZipFile
 
 class RecoveryError(Exception):
@@ -42,6 +43,12 @@ class RecoveryErrorMobileKeyDecrypt(Exception):
     pass
 
 class RecoveryErrorRSAKeyImport(Exception):
+    pass
+
+class RecoveryErrorMobileRSAKeyImport(Exception):
+    pass
+
+class RecoveryErrorMobileRSADecrypt(Exception):
     pass
 
 def _unpad(text, k = 16):
@@ -85,7 +92,7 @@ def lagrange_coefficient(my_id, ids, field):
         coefficient *= tmp
     return coefficient
 
-def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=None):
+def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=None, mobile_key_pem_path = None, mobile_key_pass = None):
     privkey = 0
     chain_code = None
     key_id = None
@@ -115,7 +122,20 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
                     if obj["keyId"] != key_id:
                         raise RecoveryErrorKeyIdNoMatch(obj["keyId"], key_id)
                     try:
-                        data = decrypt_mobile_private_key(passphrase.encode(), obj["userId"].encode(), bytes.fromhex(obj["encryptedKey"]))
+                        if (passphrase):
+                            data = decrypt_mobile_private_key(passphrase.encode(), obj["userId"].encode(), bytes.fromhex(obj["encryptedKey"]))
+                        else:
+                            with open(mobile_key_pem_path, 'r') as _file:
+                                mobile_key_pem = _file.read()
+                            try:
+                                mobile_key = RSA.importKey(mobile_key_pem, passphrase=mobile_key_pass)
+                                mobile_cipher = PKCS1_OAEP.new(mobile_key, SHA256)
+                            except ValueError:
+                                raise RecoveryErrorMobileRSAKeyImport()
+                            try:
+                                data = mobile_cipher.decrypt(bytes.fromhex(obj["encryptedKey"]))
+                            except ValueError:
+                                raise RecoveryErrorMobileRSADecrypt()
                     except ValueError:
                         raise RecoveryErrorMobileKeyDecrypt()
                     players_data[get_player_id(key_id, obj["deviceId"], False)] = int.from_bytes(data, byteorder='big')
