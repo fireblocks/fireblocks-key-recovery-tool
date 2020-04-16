@@ -75,7 +75,7 @@ def main():
             key_pass = None
 
     try:
-        privkey, chaincode = recover.restore_key_and_chaincode(
+        privkeys, chaincode = recover.restore_key_and_chaincode(
             args.backup, args.key, passphrase, key_pass, args.mobile_key, mobile_key_pass)
     except recover.RecoveryErrorMobileKeyDecrypt:
         print(colored("Failed to decrypt mobile Key. " + colored("Please make sure you have the mobile passphrase entered correctly.", attrs = ["bold"]), "cyan")) 
@@ -94,17 +94,19 @@ def main():
         print(colored("metadata.json doesn't contain a valid chain code.", "cyan"))
         exit(-1)
 
-    pub = recover.get_public_key(privkey)
-
+    show_xprv = False
     if args.prv:
         show_xprv = query_yes_no('''
 Are you sure you want to show the extended private key of the Vault?
 Be sure you are in a private location and no one can see your screen.'''
         , default = "no")
+
+    for algo, privkey in privkeys:
+        pub = recover.get_public_key(algo, privkey)
         if show_xprv:
-            print("XPRV:\t" + recover.encode_extended_key(privkey, chaincode, False))
-        
-    print("XPUB:\t%s\t%s" % (recover.encode_extended_key(pub, chaincode, True), colored("Verified!","green")))
+            print(algo + " XPRV:\t" + recover.encode_extended_key(algo, privkey, chaincode, False))
+            
+        print(algo + " XPUB:\t%s\t%s" % (recover.encode_extended_key(algo, pub, chaincode, True), colored("Verified!","green")))
 
 if __name__ == "__main__" :
     main()

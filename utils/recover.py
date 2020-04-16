@@ -4,6 +4,7 @@ import hashlib
 import json
 import uuid
 import struct
+from collections import defaultdict
 from .curve import secp256k1
 from .point import Point
 from .helper import encode_base58_checksum
@@ -31,13 +32,27 @@ class RecoveryErrorPublicKeyNoMatch(Exception):
     # def __str__(self):
     #     return "metadata.json public key doesn't match the calculated one (%s != %s)" % (self._metadata_public_key, self._pub)
 
-class RecoveryErrorKeyIdNoMatch(Exception):
-    def __init__(self, metadata_key_id, key_id):
-        self._metadata_key_id = metadata_key_id
+class RecoveryErrorKeyIdNotInMetadata(Exception):
+    def __init__(self, key_id):
         self._key_id = key_id
 
     def __str__(self):
-        return "ERROR: metadata.json key id doesn't match the calculated one (%s != %s)" % (self._metadata_key_id, self._key_id)
+        return "ERROR: Found key id %s in zip file, but it doesn't exist in metadata.json" % (self._key_id)
+
+class RecoveryErrorKeyIdMissing(Exception):
+    def __init__(self, key_id):
+        self._key_id = key_id
+
+    def __str__(self):
+        return "ERROR: metadata.json contains key id %s, which wasn't found in zip file" % (self._key_id)
+
+class RecoveryErrorUnknownAlgorithm(Exception):
+    def __init__(self, algo):
+        self._algo = algo
+
+    def __str__(self):
+        return "ERROR: metadata.json contains unsupported signature algorithm %s" % (self._key_id)
+
 
 class RecoveryErrorMobileKeyDecrypt(Exception):
     pass
@@ -92,12 +107,24 @@ def lagrange_coefficient(my_id, ids, field):
         coefficient *= tmp
     return coefficient
 
+def calculate_keys(key_id, player_to_data, algo):
+    if algo == "MPC_ECDSA_SECP256K1":
+        privkey = 0
+        for key, value in player_to_data.items():
+            privkey = (privkey + value * lagrange_coefficient(key, player_to_data.keys(), secp256k1.q)) % secp256k1.q
+
+        pubkey = secp256k1.G * privkey
+        return privkey, pubkey
+    elif algo == "MPC_EDDSA_ED25519":
+        pass
+    else:
+        raise RecoveryErrorUnknownAlgorithm(algo)
+
 def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=None, mobile_key_pem_path = None, mobile_key_pass = None):
-    privkey = 0
+    privkeys = {}
     chain_code = None
-    key_id = None
-    metadata_public_key = None
-    players_data = {}
+    players_data = defaultdict({})
+    key_metadata_mapping = {}
 
     with open(private_pem_path, 'r') as _file:
         key_pem = _file.read()
@@ -113,14 +140,18 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
         with zipfile.open("metadata.json") as file:
             obj = json.loads(file.read())
             chain_code = bytes.fromhex(obj["chainCode"])
-            key_id = obj["keyId"]
-            metadata_public_key = obj["publicKey"]
+            for key_id, key_metadata in obj["keys"].items():
+                metadata_public_key = key_metadata["publicKey"]
+                algo = key_metadata["algo"]
+                key_metadata_mapping[key_id] = algo, metadata_public_key
+
         for name in zipfile.namelist():
             with zipfile.open(name) as file:
-                if name == "MOBILE":
+                if name.startswith("MOBILE"):
                     obj = json.loads(file.read())
-                    if obj["keyId"] != key_id:
-                        raise RecoveryErrorKeyIdNoMatch(obj["keyId"], key_id)
+                    key_id = obj["keyId"]
+                    if key_id not in key_metadata_mapping:
+                        raise RecoveryErrorKeyIdNotInMetadata(key_id)
                     try:
                         if (passphrase):
                             data = decrypt_mobile_private_key(passphrase.encode(), obj["userId"].encode(), bytes.fromhex(obj["encryptedKey"]))
@@ -138,30 +169,40 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
                                 raise RecoveryErrorMobileRSADecrypt()
                     except ValueError:
                         raise RecoveryErrorMobileKeyDecrypt()
-                    players_data[get_player_id(key_id, obj["deviceId"], False)] = int.from_bytes(data, byteorder='big')
+                    players_data[key_id][get_player_id(key_id, obj["deviceId"], False)] = int.from_bytes(data, byteorder='big')
                 elif name == "metadata.json":
                     continue
                 else:
+                    cosigner_id, key_id = name.split('_')
                     data = cipher.decrypt(file.read())
-                    players_data[get_player_id(key_id, name, True)] = int.from_bytes(data, byteorder='big')
+                    players_data[key_id][get_player_id(key_id, cosigner_id, True)] = int.from_bytes(data, byteorder='big')
 
-    for key, value in players_data.items():
-        privkey = (privkey + value * lagrange_coefficient(key, players_data.keys(), secp256k1.q)) % secp256k1.q
+    for key_id in key_metadata_mapping:
+        if key_id not in players_data:
+            raise RecoveryErrorKeyIdMissing(key_id)
 
-    pubkey = secp256k1.G * privkey
-    pub = pubkey.serialize()
+    for key_id, key_players_data in players_data.items():
+        algo = key_metadata_mapping[key_id][0]
+        privkey, pubkey = calculate_keys(key_id, key_players_data, algo)
+        pub = pubkey.serialize()
     
-    if (metadata_public_key != pub):
-        raise RecoveryErrorPublicKeyNoMatch(metadata_public_key, pub)
-    
-    return privkey, chain_code
+        pub_from_metadata = key_metadata_mapping[key_id][1]
+        if (pub_from_metadata != pub):
+            raise RecoveryErrorPublicKeyNoMatch(pub_from_metadata, pub)
 
-def get_public_key(private_key):
-    privkey = private_key
-    if type(private_key) != int:
-        privkey = int.from_bytes(private_key, byteorder='big')
-    pubkey = secp256k1.G * privkey
-    return pubkey.serialize()
+        privkeys[algo] = privkey
+    
+    return privkeys, chain_code
+
+def get_public_key(algo, private_key):
+    if algo == "MPC_ECDSA_SECP256K1":    
+        privkey = private_key
+        if type(private_key) != int:
+            privkey = int.from_bytes(private_key, byteorder='big')
+        pubkey = secp256k1.G * privkey
+        return pubkey.serialize()
+    elif algo == "MPC_EDDSA_ED25519":
+        pass
 
 def restore_private_key(zip_path, private_pem_path, passphrase, key_pass=None):
     return restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass)[0]
@@ -174,7 +215,7 @@ def restore_chaincode(zip_path):
             obj = json.loads(file.read())
             return bytes.fromhex(obj["chainCode"])
 
-def encode_extended_key(key, chain_code, is_pub):
+def encode_extended_key(algo, key, chain_code, is_pub):
     if type(key) == int:
         key = key.to_bytes(32, byteorder='big')
     elif type(key) == str:
