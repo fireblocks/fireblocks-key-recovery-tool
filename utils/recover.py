@@ -8,6 +8,7 @@ from collections import defaultdict
 from .curve import secp256k1
 from .point import Point
 from .helper import encode_base58_checksum
+from utils import ed25519
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Cipher import AES
@@ -76,6 +77,12 @@ def _unpad(text, k = 16):
     l = nl - val
     return text[:l]
 
+def _ed25519_point_serialize(p):
+    if (p[0] & 1):
+        return (p[1] + 2**255).to_bytes(32, byteorder="little").hex()
+    else:
+        return (p[1]).to_bytes(32, byteorder="little").hex()
+
 def decrypt_mobile_private_key(recovery_password, user_id, encrypted_key):
     wrap_key = hashlib.pbkdf2_hmac("sha1", recovery_password, user_id, 10000, 32)
     iv = bytes(chr(0) * 16, 'utf-8')
@@ -114,16 +121,21 @@ def calculate_keys(key_id, player_to_data, algo):
             privkey = (privkey + value * lagrange_coefficient(key, player_to_data.keys(), secp256k1.q)) % secp256k1.q
 
         pubkey = secp256k1.G * privkey
-        return privkey, pubkey
+        return privkey, pubkey.serialize()
     elif algo == "MPC_EDDSA_ED25519":
-        pass
+        privkey = 0
+        for key, value in player_to_data.items():
+            privkey = (privkey + value * lagrange_coefficient(key, player_to_data.keys(), ed25519.l)) % ed25519.l
+
+        pubkey = ed25519.scalarmult(ed25519.B, privkey)
+        return privkey, _ed25519_point_serialize(pubkey)
     else:
         raise RecoveryErrorUnknownAlgorithm(algo)
 
 def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=None, mobile_key_pem_path = None, mobile_key_pass = None):
     privkeys = {}
     chain_code = None
-    players_data = defaultdict({})
+    players_data = defaultdict()
     key_metadata_mapping = {}
 
     with open(private_pem_path, 'r') as _file:
@@ -183,26 +195,28 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
 
     for key_id, key_players_data in players_data.items():
         algo = key_metadata_mapping[key_id][0]
-        privkey, pubkey = calculate_keys(key_id, key_players_data, algo)
-        pub = pubkey.serialize()
-    
+        privkey, pubkey_str = calculate_keys(key_id, key_players_data, algo)
+        
         pub_from_metadata = key_metadata_mapping[key_id][1]
-        if (pub_from_metadata != pub):
-            raise RecoveryErrorPublicKeyNoMatch(pub_from_metadata, pub)
+        if (pub_from_metadata != pubkey_str):
+            raise RecoveryErrorPublicKeyNoMatch(pub_from_metadata, pubkey_str)
 
         privkeys[algo] = privkey
     
     return privkeys, chain_code
 
 def get_public_key(algo, private_key):
+    privkey = private_key
+    if type(private_key) != int:
+        privkey = int.from_bytes(private_key, byteorder='big')
     if algo == "MPC_ECDSA_SECP256K1":    
-        privkey = private_key
-        if type(private_key) != int:
-            privkey = int.from_bytes(private_key, byteorder='big')
         pubkey = secp256k1.G * privkey
         return pubkey.serialize()
     elif algo == "MPC_EDDSA_ED25519":
-        pass
+        pubkey = ed25519.scalarmult(ed25519.B, privkey)
+        return '00' + _ed25519_point_serialize(pubkey)
+    else:
+        raise RecoveryErrorUnknownAlgorithm(algo)
 
 def restore_private_key(zip_path, private_pem_path, passphrase, key_pass=None):
     return restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass)[0]
@@ -215,7 +229,7 @@ def restore_chaincode(zip_path):
             obj = json.loads(file.read())
             return bytes.fromhex(obj["chainCode"])
 
-def encode_extended_key(algo, key, chain_code, is_pub):
+def encode_extended_key(key, chain_code, is_pub):
     if type(key) == int:
         key = key.to_bytes(32, byteorder='big')
     elif type(key) == str:
