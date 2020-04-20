@@ -135,7 +135,7 @@ def calculate_keys(key_id, player_to_data, algo):
 def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=None, mobile_key_pem_path = None, mobile_key_pass = None):
     privkeys = {}
     chain_code = None
-    players_data = defaultdict()
+    players_data = defaultdict(dict)
     key_metadata_mapping = {}
 
     with open(private_pem_path, 'r') as _file:
