@@ -61,7 +61,11 @@ def encodepoint(P):
   return ''.join([chr(sum([bits[i * 8 + j] << j for j in range(8)])) for i in range(b//8)])
 
 def bit(h,i):
-  return (ord(h[i//8]) >> (i%8)) & 1
+  if type(h) == str:
+    b = ord(h[i//8])
+  else:
+    b = h[i//8]
+  return (b >> (i%8)) & 1
 
 def publickey(sk):
   h = H(sk)

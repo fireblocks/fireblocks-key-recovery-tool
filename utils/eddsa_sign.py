@@ -46,17 +46,38 @@ def eddsa_sign(private_key, message):
     s = (hram * privkey + nonce) % ed25519.l
     return _ed25519_serialize(R) + s.to_bytes(32, byteorder="little")
 
-def xpriv_eddsa_sig(xpriv, derivation_path, message):
+def eddsa_derive(extendad_key, derivation_path):
     path = derivation_path.split('/')
     if len(path) != 5 or path[0] != '44':
         raise Exception(derivation_path + " is not valid bip44 path")
-    expriv = base58.b58decode_check(xpriv)
-    if len(expriv) != 78 or int.from_bytes(expriv[:4], byteorder='big') != 0x0488ADE4:
-        raise Exception(xpriv + " is not valid XPRIV")
-    chaincode = expriv[13:45]
-    priv = int.from_bytes(expriv[46:], byteorder='big')
-    pub = ed25519.scalarmult(ed25519.B, priv)
+    exkey = base58.b58decode_check(extendad_key)
+    if len(exkey) != 78:
+        raise Exception(extendad_key + " is not valid extendad key")
+    prefix = int.from_bytes(exkey[:4], byteorder='big')
+    is_private = False
+    if prefix == 0x0488ADE4:
+        is_private = True
+    elif prefix == 0x0488B21E:
+        is_private = False
+    else:
+        raise Exception(extendad_key + " is not valid XPRIV nor XPUB")
+    chaincode = exkey[13:45]
+    priv = int.from_bytes(exkey[46:], byteorder='big')
+    if is_private:
+        pub = ed25519.scalarmult(ed25519.B, priv)
+    else:
+        pub = ed25519.decodepoint(priv)
+        priv = 0
 
     for index in path:
         (pub, priv, chaincode) = _derive_next_key_level(pub, priv, chaincode, int(index))
+    if not is_private:
+        priv = None
+    return (priv, pub)
+
+def xpriv_eddsa_sig(xpriv, derivation_path, message):
+    expriv = base58.b58decode_check(xpriv)
+    if len(expriv) != 78 or int.from_bytes(expriv[:4], byteorder='big') != 0x0488ADE4:
+        raise Exception(xpriv + " is not valid XPRIV")
+    (priv, pub) = eddsa_derive(xpriv, derivation_path)
     return eddsa_sign(priv, message)
