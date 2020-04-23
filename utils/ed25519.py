@@ -18,14 +18,14 @@ def expmod(b,e,m):
   return t
 
 def inv(x):
-  return expmod(x,q-2,q)
+  return pow(x,q-2,q)
 
 d = -121665 * inv(121666)
-I = expmod(2,(q-1)//4,q)
+I = pow(2,(q-1)//4,q)
 
 def xrecover(y):
   xx = (y*y-1) * inv(d*y*y+1)
-  x = expmod(xx,(q+3)//8,q)
+  x = pow(xx,(q+3)//8,q)
   if (x*x - xx) % q != 0: x = (x*I) % q
   if x % 2 != 0: x = q-x
   return x
@@ -39,8 +39,9 @@ def edwards(P,Q):
   y1 = P[1]
   x2 = Q[0]
   y2 = Q[1]
-  x3 = (x1*y2+x2*y1) * inv(1+d*x1*x2*y1*y2)
-  y3 = (y1*y2+x1*x2) * inv(1-d*x1*x2*y1*y2)
+  t = (d*x1*x2*y1*y2) % q
+  x3 = (x1*y2+x2*y1) * inv(1+t)
+  y3 = (y1*y2+x1*x2) * inv(1-t)
   return [x3 % q,y3 % q]
 
 def scalarmult(P,e):
