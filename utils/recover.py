@@ -152,7 +152,12 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
         with zipfile.open("metadata.json") as file:
             obj = json.loads(file.read())
             chain_code = bytes.fromhex(obj["chainCode"])
-            for key_id, key_metadata in obj["keys"].items():
+            if "keys" in obj:
+                keys_in_backup = obj["keys"]
+            else:
+                # backward compatibility: backup includes just one ECDSA key
+                keys_in_backup = {obj["keyId"]: {"publicKey": obj["publicKey"], "algo": "MPC_ECDSA_SECP256K1"}}
+            for key_id, key_metadata in keys_in_backup.items():
                 metadata_public_key = key_metadata["publicKey"]
                 algo = key_metadata["algo"]
                 key_metadata_mapping[key_id] = algo, metadata_public_key
@@ -185,7 +190,14 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
                 elif name == "metadata.json":
                     continue
                 else:
-                    cosigner_id, key_id = name.split('_')
+                    if '_' in name:                        
+                        cosigner_id, key_id = name.split('_')
+                    else:
+                        #backward compatibility: backup includes just one ECDSA key
+                        cosigner_id = name
+                        assert len(key_metadata_mapping) == 1
+                        key_id = list(key_metadata_mapping.keys())[0]
+                        
                     data = cipher.decrypt(file.read())
                     players_data[key_id][get_player_id(key_id, cosigner_id, True)] = int.from_bytes(data, byteorder='big')
 
@@ -224,7 +236,7 @@ def restore_private_key(zip_path, private_pem_path, passphrase, key_pass=None):
 def restore_chaincode(zip_path):
     with ZipFile(zip_path, 'r') as zipfile:
         if "metadata.json" not in zipfile.namelist():
-            raise RecoveryMetadataNotFound(zip_path)
+            raise RecoveryErrorMetadataNotFound(zip_path)
         with zipfile.open("metadata.json") as file:
             obj = json.loads(file.read())
             return bytes.fromhex(obj["chainCode"])
