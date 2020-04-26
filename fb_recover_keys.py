@@ -8,6 +8,17 @@ import getpass
 import sys
 from termcolor import colored
 
+pubkey_descriptions = {
+    'MPC_ECDSA_SECP256K1': 'MPC_ECDSA_SECP256K1 XPUB',
+    'MPC_EDDSA_ED25519': 'MPC_EdDSA_ED25519 public key (Fireblocks format)',
+}
+
+privkey_descriptions = {
+    'MPC_ECDSA_SECP256K1': 'MPC_ECDSA_SECP256K1 XPRV',
+    'MPC_EDDSA_ED25519': 'MPC_EdDSA_ED25519 private key (Fireblocks format)',
+}
+
+
 def query_yes_no(question, default="yes"):
     """Ask a yes/no question via input() and return their answer.
 
@@ -101,12 +112,12 @@ Are you sure you want to show the extended private key of the Vault?
 Be sure you are in a private location and no one can see your screen.'''
         , default = "no")
 
-    for algo, privkey in privkeys:
+    for algo, privkey in privkeys.items():
         pub = recover.get_public_key(algo, privkey)
         if show_xprv:
-            print(algo + " XPRV:\t" + recover.encode_extended_key(privkey, chaincode, False))
+            print(privkey_descriptions[algo] + ":\t" + recover.encode_extended_key(privkey, chaincode, False))
             
-        print(algo + " XPUB:\t%s\t%s" % (recover.encode_extended_key(pub, chaincode, True), colored("Verified!","green")))
+        print(pubkey_descriptions[algo] + ":\t%s\t%s" % (recover.encode_extended_key(pub, chaincode, True), colored("Verified!","green")))
 
 if __name__ == "__main__" :
     main()
