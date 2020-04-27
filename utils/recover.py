@@ -77,18 +77,18 @@ def _unpad(text, k = 16):
     l = nl - val
     return text[:l]
 
-def _ed25519_point_serialize(p):
-    if (p[0] & 1):
-        return (p[1] + 2**255).to_bytes(32, byteorder="little").hex()
-    else:
-        return (p[1]).to_bytes(32, byteorder="little").hex()
-
 def decrypt_mobile_private_key(recovery_password, user_id, encrypted_key):
     wrap_key = hashlib.pbkdf2_hmac("sha1", recovery_password, user_id, 10000, 32)
     iv = bytes(chr(0) * 16, 'utf-8')
     cipher = AES.new(wrap_key, AES.MODE_CBC, iv)
     prv_key = _unpad(cipher.decrypt(encrypted_key))
     return prv_key
+
+def _ed25519_point_serialize(p):
+    if (p[0] & 1):
+        return (p[1] + 2**255).to_bytes(32, byteorder="little").hex()
+    else:
+        return (p[1]).to_bytes(32, byteorder="little").hex()
 
 def get_player_id(key_id, cosigner_id, is_cloud):
     if is_cloud:

@@ -1,6 +1,4 @@
 import hashlib
-import sys
-sys.setrecursionlimit(2000)
 
 b = 256
 q = 2**255 - 19
