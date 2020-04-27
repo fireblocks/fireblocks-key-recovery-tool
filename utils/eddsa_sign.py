@@ -27,6 +27,8 @@ def _derive_next_key_level(pubkey, privkey, chaincode, child_num):
     return (derived_pubkey, derived_privkey, derived_chaincode)
 
 def eddsa_sign(private_key, message):
+    if type(message) == str:
+        message = message.encode('utf-8')
     privkey = private_key
     if type(private_key) != int:
         privkey = int.from_bytes(private_key, byteorder='big')
@@ -34,14 +36,14 @@ def eddsa_sign(private_key, message):
     sha = hashlib.sha512()
     sha.update(seed)
     sha.update(private_key.to_bytes(32, byteorder="little"))
-    sha.update(message.encode('utf-8'))
+    sha.update(message)
     nonce = int.from_bytes(sha.digest(), byteorder="little") % ed25519.l
     R = ed25519.scalarmult(ed25519.B, nonce)
     A = ed25519.scalarmult(ed25519.B, privkey)
     sha = hashlib.sha512()
     sha.update(_ed25519_serialize(R))
     sha.update(_ed25519_serialize(A))
-    sha.update(message.encode('utf-8'))
+    sha.update(message)
     hram = int.from_bytes(sha.digest(), byteorder='little') % ed25519.l
     s = (hram * privkey + nonce) % ed25519.l
     return _ed25519_serialize(R) + s.to_bytes(32, byteorder="little")
@@ -66,14 +68,14 @@ def eddsa_derive(extendad_key, derivation_path):
     if is_private:
         pub = ed25519.scalarmult(ed25519.B, priv)
     else:
-        pub = ed25519.decodepoint(priv)
+        pub = ed25519.decodepoint(priv.to_bytes(32, 'big'))
         priv = 0
 
     for index in path:
         (pub, priv, chaincode) = _derive_next_key_level(pub, priv, chaincode, int(index))
     if not is_private:
         priv = None
-    return (priv, pub)
+    return (priv, _ed25519_serialize(pub))
 
 def xpriv_eddsa_sig(xpriv, derivation_path, message):
     expriv = base58.b58decode_check(xpriv)
@@ -81,3 +83,6 @@ def xpriv_eddsa_sig(xpriv, derivation_path, message):
         raise Exception(xpriv + " is not valid XPRIV")
     (priv, pub) = eddsa_derive(xpriv, derivation_path)
     return eddsa_sign(priv, message)
+
+def private_key_to_public_key(private_key):
+    return _ed25519_serialize(ed25519.scalarmult(ed25519.B, private_key))
