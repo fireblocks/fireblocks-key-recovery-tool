@@ -8,6 +8,11 @@ from crc16 import crc16xmodem
 
 from utils import eddsa_sign
 
+BIP_44_CONSTANT = 44
+XLM_ASSET_NUM = 146
+CHANGE = 0
+ADDR_INDEX = 0
+
 class RawKeypair(Keypair):
     def __init__(self, signing_key) -> None:
         self.signing_key = signing_key
@@ -33,7 +38,7 @@ def withdraw(key, to_address, amount = None, dst_tag = None):
         builder.append_account_merge_op(to_address)
     else:
         builder.append_payment_op(to_address, str(round(float(amount),7)), 'XLM')
-    if not dst_tag is None:
+    if dst_tag is not None:
         builder.add_text_memo(dst_tag) 
     builder.keypair = keypair
     builder.sign()
@@ -63,11 +68,11 @@ def public_key_to_address(public_key: bytes) -> str:
     return base64.b32encode(payload + crc).decode("utf-8").rstrip("=")
 
 def xpub_to_address(xpub: str, account: int) -> str:
-    path = '44/146/{}/0/0'.format(account)
+    path = f'{BIP_44_CONSTANT}/{XLM_ASSET_NUM}/{account}/{CHANGE}/{ADDR_INDEX}'
     _, pub = eddsa_sign.eddsa_derive(xpub, path)
     return public_key_to_address(pub)
 
 def withdraw_from_account(xpriv: str, account: int, to_address : str, amount: float = None, dst_tag: str = None) -> str:
-    path = '44/146/{}/0/0'.format(account)
+    path = f'{BIP_44_CONSTANT}/{XLM_ASSET_NUM}/{account}/{CHANGE}/{ADDR_INDEX}'
     priv, _ = eddsa_sign.eddsa_derive(xpriv, path)
     return withdraw(priv, to_address, amount, dst_tag)
