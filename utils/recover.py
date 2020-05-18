@@ -15,6 +15,16 @@ from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
 from zipfile import ZipFile
 
+pubkey_prefix = {
+    'MPC_ECDSA_SECP256K1': 0x0488B21E,
+    'MPC_EDDSA_ED25519': 0x03273e4b,
+}
+
+privkey_prefix = {
+    'MPC_ECDSA_SECP256K1': 0x0488ADE4,
+    'MPC_EDDSA_ED25519': 0x03273a10,
+}
+
 class RecoveryError(Exception):
     pass
 
@@ -241,16 +251,16 @@ def restore_chaincode(zip_path):
             obj = json.loads(file.read())
             return bytes.fromhex(obj["chainCode"])
 
-def encode_extended_key(key, chain_code, is_pub):
+def encode_extended_key(algo, key, chain_code, is_pub):
     if type(key) == int:
         key = key.to_bytes(32, byteorder='big')
     elif type(key) == str:
         key = bytes.fromhex(key)
     
     if is_pub:
-        extended_key = (0x0488B21E).to_bytes(4, byteorder='big') # prefix
+        extended_key = pubkey_prefix[algo].to_bytes(4, byteorder='big') # prefix
     else:
-        extended_key = (0x0488ADE4).to_bytes(4, byteorder='big') # prefix
+        extended_key = privkey_prefix[algo].to_bytes(4, byteorder='big') # prefix
     extended_key += bytes(1) # depth
     extended_key += bytes(4) # fingerprint
     extended_key += bytes(4) # child number

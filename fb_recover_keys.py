@@ -115,9 +115,9 @@ Be sure you are in a private location and no one can see your screen.'''
     for algo, privkey in privkeys.items():
         pub = recover.get_public_key(algo, privkey)
         if show_xprv:
-            print(privkey_descriptions[algo] + ":\t" + recover.encode_extended_key(privkey, chaincode, False))
+            print(privkey_descriptions[algo] + ":\t" + recover.encode_extended_key(algo, privkey, chaincode, False))
             
-        print(pubkey_descriptions[algo] + ":\t%s\t%s" % (recover.encode_extended_key(pub, chaincode, True), colored("Verified!","green")))
+        print(pubkey_descriptions[algo] + ":\t%s\t%s" % (recover.encode_extended_key(algo, pub, chaincode, True), colored("Verified!","green")))
 
 if __name__ == "__main__" :
     main()

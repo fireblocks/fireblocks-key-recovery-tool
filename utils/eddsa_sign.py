@@ -48,23 +48,23 @@ def eddsa_sign(private_key, message):
     s = (hram * privkey + nonce) % ed25519.l
     return _ed25519_serialize(R) + s.to_bytes(32, byteorder="little")
 
-def eddsa_derive(extendad_key, derivation_path):
+def eddsa_derive(fkey, derivation_path):
     path = derivation_path.split('/')
     if len(path) != 5 or path[0] != '44':
         raise Exception(derivation_path + " is not valid bip44 path")
-    exkey = base58.b58decode_check(extendad_key)
-    if len(exkey) != 78:
-        raise Exception(extendad_key + " is not valid extendad key")
-    prefix = int.from_bytes(exkey[:4], byteorder='big')
+    decoded_key = base58.b58decode_check(fkey)
+    if len(decoded_key) != 78:
+        raise Exception(fkey + " is not valid Fireblocks-formatted key")
+    prefix = int.from_bytes(decoded_key[:4], byteorder='big')
     is_private = False
-    if prefix == 0x0488ADE4:
+    if prefix == 0x03273a10:
         is_private = True
-    elif prefix == 0x0488B21E:
+    elif prefix == 0x03273e4b:
         is_private = False
     else:
-        raise Exception(extendad_key + " is not valid XPRIV nor XPUB")
-    chaincode = exkey[13:45]
-    priv = int.from_bytes(exkey[46:], byteorder='big')
+        raise Exception(fkey + " is not valid FPRV nor FPUB")
+    chaincode = decoded_key[13:45]
+    priv = int.from_bytes(decoded_key[46:], byteorder='big')
     if is_private:
         pub = ed25519.scalarmult(ed25519.B, priv)
     else:
@@ -77,11 +77,11 @@ def eddsa_derive(extendad_key, derivation_path):
         priv = None
     return (priv, _ed25519_serialize(pub))
 
-def xpriv_eddsa_sig(xpriv, derivation_path, message):
-    expriv = base58.b58decode_check(xpriv)
-    if len(expriv) != 78 or int.from_bytes(expriv[:4], byteorder='big') != 0x0488ADE4:
-        raise Exception(xpriv + " is not valid XPRIV")
-    (priv, pub) = eddsa_derive(xpriv, derivation_path)
+def fprv_eddsa_sig(fprv, derivation_path, message):
+    fprv_decoded = base58.b58decode_check(fprv)
+    if len(fprv_decoded) != 78 or int.from_bytes(fprv_decoded[:4], byteorder='big') != 0x03273a10:
+        raise Exception(fprv + " is not valid FPRV")
+    (priv, pub) = eddsa_derive(fprv, derivation_path)
     return eddsa_sign(priv, message)
 
 def private_key_to_public_key(private_key):
