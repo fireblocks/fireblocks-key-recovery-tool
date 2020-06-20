@@ -9,7 +9,7 @@
 
 ### Build the utility in docker
 
-* docker build -t fb_recovery_key .
+* docker build -t fb_recover_key .
 
 ### Build the utility locally
 
@@ -28,7 +28,7 @@
 #### Run the utility in docker
 
 * cd to `<directory containing the backup file and the private key>`
-* Run: docker run -it -v "${PWD}:/opt/fb_recover_keys/backup" fb_recovery_key:latest bash
+* Run: docker run -it -v "${PWD}:/opt/fb_recover_keys/backup" fb_recover_key:latest bash
 * Run: ./fb_recover_keys.py backup/backup.zip backup/key.pem --prv
 
 #### Run the utility locally
