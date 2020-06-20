@@ -4,7 +4,8 @@
 
 * Please clone the repository:
   * `git clone https://github.com/fireblocks/fb_recover_keys.git`
-  * cd fb_recover_keys
+
+* cd fb_recover_keys
 
 ### Prerequisites
 
