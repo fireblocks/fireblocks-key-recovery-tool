@@ -8,7 +8,7 @@
 ## Build the utility
 
 ### Build the utility in docker
-
+* cd fb_recover_keys
 * docker build -t fb_recover_key .
 
 ### Build the utility locally
