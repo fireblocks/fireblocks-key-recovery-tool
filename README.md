@@ -13,7 +13,7 @@
 * Passphrase
 
 
-## Docker
+## Running in Docker
 
 ### Build the utility in docker
 * docker build -t fb_recover_key .
@@ -23,7 +23,7 @@
 * Run: docker run -it -v "${PWD}:/opt/fb_recover_keys/backup" fb_recover_key:latest bash
 * Run: ./fb_recover_keys.py backup/backup.zip backup/key.pem --prv
 
-## Locally
+## Running Locally
 
 ### Build the utility locally
 * install python 3
