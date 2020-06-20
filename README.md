@@ -30,5 +30,5 @@
 * install pip 3
 * run: pip3 install -r requirements.txt
 
-#### Run the utility locally
+### Run the utility locally
 * ./fb_recover_keys.py `<backup zip file> <RSA recovery private key>` --prv
