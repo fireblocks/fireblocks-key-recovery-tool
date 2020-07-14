@@ -36,9 +36,7 @@ class RecoveryErrorMetadataNotFound(Exception):
         return ("Backup zip %s doesn't contain metadata.json" % self._zip_file_path)
 
 class RecoveryErrorPublicKeyNoMatch(Exception):
-    def __init____(self, metadata_public_key, pub):
-        self._metadata_public_key = metadata_public_key
-        self._pub = pub
+    pass
 
     # def __str__(self):
     #     return "metadata.json public key doesn't match the calculated one (%s != %s)" % (self._metadata_public_key, self._pub)
@@ -221,10 +219,12 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
         
         pub_from_metadata = key_metadata_mapping[key_id][1]
         if (pub_from_metadata != pubkey_str):
-            raise RecoveryErrorPublicKeyNoMatch(pub_from_metadata, pubkey_str)
+            print(f"Failed to recover {algo} key, expected public key is: {pub_from_metadata} calculated public key is: {pubkey_str}")
 
         privkeys[algo] = privkey
     
+    if len(privkeys) == 0:
+        raise RecoveryErrorPublicKeyNoMatch()
     return privkeys, chain_code
 
 def get_public_key(algo, private_key):
