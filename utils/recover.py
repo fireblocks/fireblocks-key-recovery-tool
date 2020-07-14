@@ -202,12 +202,15 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
                         cosigner_id, key_id = name.split('_')
                     else:
                         #backward compatibility: backup includes just one ECDSA key
-                        cosigner_id = name
-                        assert len(key_metadata_mapping) == 1
-                        key_id = list(key_metadata_mapping.keys())[0]
-                        
-                    data = cipher.decrypt(file.read())
-                    players_data[key_id][get_player_id(key_id, cosigner_id, True)] = int.from_bytes(data, byteorder='big')
+                        if len(key_metadata_mapping) == 1: # len > 1 means new format, so ignore old format files
+                            cosigner_id = name
+                            key_id = list(key_metadata_mapping.keys())[0]
+                        else:
+                            key_id = None
+
+                    if key_id:
+                        data = cipher.decrypt(file.read())
+                        players_data[key_id][get_player_id(key_id, cosigner_id, True)] = int.from_bytes(data, byteorder='big')
 
     for key_id in key_metadata_mapping:
         if key_id not in players_data:
