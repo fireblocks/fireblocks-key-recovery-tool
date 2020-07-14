@@ -223,8 +223,9 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
         pub_from_metadata = key_metadata_mapping[key_id][1]
         if (pub_from_metadata != pubkey_str):
             print(f"Failed to recover {algo} key, expected public key is: {pub_from_metadata} calculated public key is: {pubkey_str}")
-
-        privkeys[algo] = privkey
+            privkeys[algo] = None
+        else:
+            privkeys[algo] = privkey
     
     if len(privkeys) == 0:
         raise RecoveryErrorPublicKeyNoMatch()
