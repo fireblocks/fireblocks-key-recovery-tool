@@ -25,6 +25,11 @@ privkey_prefix = {
     'MPC_EDDSA_ED25519': 0x03273a10,
 }
 
+algorithm_enum_mapping = {
+    'MPC_ECDSA_SECP256K1': 0,
+    'MPC_EDDSA_ED25519': 1,
+}
+
 class RecoveryError(Exception):
     pass
 
@@ -194,6 +199,11 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
                                 raise RecoveryErrorMobileRSADecrypt()
                     except ValueError:
                         raise RecoveryErrorMobileKeyDecrypt()
+                    if len(data) == 36: # the first 4 bytes encode the algorithm, and the rest is the private share
+                        algo = int.from_bytes(data[:4], byteorder='little')
+                        if algorithm_enum_mapping[key_metadata_mapping[key_id][0]] != algo:
+                            raise RecoveryErrorUnknownAlgorithm(algo)
+                        data = data[4:]
                     players_data[key_id][get_player_id(key_id, obj["deviceId"], False)] = int.from_bytes(data, byteorder='big')
                 elif name == "metadata.json":
                     continue

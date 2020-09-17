@@ -35,7 +35,7 @@ def eddsa_sign(private_key, message):
     seed = Random.get_random_bytes(32)
     sha = hashlib.sha512()
     sha.update(seed)
-    sha.update(private_key.to_bytes(32, byteorder="little"))
+    sha.update(privkey.to_bytes(32, byteorder="little"))
     sha.update(message)
     nonce = int.from_bytes(sha.digest(), byteorder="little") % ed25519.l
     R = ed25519.scalarmult(ed25519.B, nonce)
