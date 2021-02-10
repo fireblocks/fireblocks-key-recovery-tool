@@ -17,17 +17,23 @@ from zipfile import ZipFile
 
 pubkey_prefix = {
     'MPC_ECDSA_SECP256K1': 0x0488B21E,
+    'MPC_CMP_ECDSA_SECP256K1': 0x0488B21E,
     'MPC_EDDSA_ED25519': 0x03273e4b,
+    'MPC_CMP_EDDSA_ED25519': 0x03273e4b,
 }
 
 privkey_prefix = {
     'MPC_ECDSA_SECP256K1': 0x0488ADE4,
+    'MPC_CMP_ECDSA_SECP256K1': 0x0488ADE4,
     'MPC_EDDSA_ED25519': 0x03273a10,
+    'MPC_CMP_EDDSA_ED25519': 0x03273a10,
 }
 
 algorithm_enum_mapping = {
     'MPC_ECDSA_SECP256K1': 0,
+    'MPC_CMP_ECDSA_SECP256K1': 0,
     'MPC_EDDSA_ED25519': 1,
+    'MPC_CMP_EDDSA_ED25519': 1,
 }
 
 class RecoveryError(Exception):
@@ -142,6 +148,20 @@ def calculate_keys(key_id, player_to_data, algo):
 
         pubkey = ed25519.scalarmult(ed25519.B, privkey)
         return privkey, _ed25519_point_serialize(pubkey)
+    if algo == "MPC_CMP_ECDSA_SECP256K1":
+        privkey = 0
+        for key, value in player_to_data.items():
+            privkey = (privkey + value) % secp256k1.q
+
+        pubkey = secp256k1.G * privkey
+        return privkey, pubkey.serialize()
+    elif algo == "MPC_CMP_EDDSA_ED25519":
+        privkey = 0
+        for key, value in player_to_data.items():
+            privkey = (privkey + value) % ed25519.l
+
+        pubkey = ed25519.scalarmult(ed25519.B, privkey)
+        return privkey, _ed25519_point_serialize(pubkey)
     else:
         raise RecoveryErrorUnknownAlgorithm(algo)
 
@@ -245,10 +265,10 @@ def get_public_key(algo, private_key):
     privkey = private_key
     if type(private_key) != int:
         privkey = int.from_bytes(private_key, byteorder='big')
-    if algo == "MPC_ECDSA_SECP256K1":    
+    if algo == "MPC_ECDSA_SECP256K1" or algo == "MPC_CMP_ECDSA_SECP256K1":    
         pubkey = secp256k1.G * privkey
         return pubkey.serialize()
-    elif algo == "MPC_EDDSA_ED25519":
+    elif algo == "MPC_EDDSA_ED25519" or algo == "MPC_CMP_EDDSA_ED25519":
         pubkey = ed25519.scalarmult(ed25519.B, privkey)
         return '00' + _ed25519_point_serialize(pubkey)
     else:

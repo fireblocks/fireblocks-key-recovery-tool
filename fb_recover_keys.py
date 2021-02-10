@@ -10,12 +10,16 @@ from termcolor import colored
 
 pubkey_descriptions = {
     'MPC_ECDSA_SECP256K1': 'MPC_ECDSA_SECP256K1 XPUB',
+    'MPC_CMP_ECDSA_SECP256K1': 'MPC_ECDSA_SECP256K1 XPUB',
     'MPC_EDDSA_ED25519': 'MPC_EdDSA_ED25519 extended public key (Fireblocks format)',
+    'MPC_CMP_EDDSA_ED25519': 'MPC_EdDSA_ED25519 extended public key (Fireblocks format)',
 }
 
 privkey_descriptions = {
     'MPC_ECDSA_SECP256K1': 'MPC_ECDSA_SECP256K1 XPRV',
+    'MPC_CMP_ECDSA_SECP256K1': 'MPC_ECDSA_SECP256K1 XPRV',
     'MPC_EDDSA_ED25519': 'MPC_EdDSA_ED25519 extended private key (Fireblocks format)',
+    'MPC_CMP_EDDSA_ED25519': 'MPC_EdDSA_ED25519 extended private key (Fireblocks format)',
 }
 
 
