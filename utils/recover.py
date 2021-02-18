@@ -71,7 +71,7 @@ class RecoveryErrorUnknownAlgorithm(Exception):
         self._algo = algo
 
     def __str__(self):
-        return "ERROR: metadata.json contains unsupported signature algorithm %s" % (self._key_id)
+        return "ERROR: metadata.json contains unsupported signature algorithm %s" % (self._algo)
 
 
 class RecoveryErrorMobileKeyDecrypt(Exception):
