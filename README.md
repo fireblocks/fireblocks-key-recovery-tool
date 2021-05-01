@@ -3,9 +3,9 @@
 ## Installation
 
 * Please clone the repository:
-  * `git clone https://github.com/fireblocks/fb_recover_keys.git`
+  * `git clone https://github.com/fireblocks/fireblocks-key-recovery-tool.git`
 
-* cd fb_recover_keys
+* cd fireblocks-key-recovery-tool
 
 ### Prerequisites
 
