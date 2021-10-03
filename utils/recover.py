@@ -73,6 +73,9 @@ class RecoveryErrorUnknownAlgorithm(Exception):
     def __str__(self):
         return "ERROR: metadata.json contains unsupported signature algorithm %s" % (self._algo)
 
+class RecoveryErrorUnknownChainCode(Exception):
+    def __str__(self):
+        return "ERROR: chain code is metadata.json is missing or invalid "
 
 class RecoveryErrorMobileKeyDecrypt(Exception):
     pass
@@ -167,7 +170,6 @@ def calculate_keys(key_id, player_to_data, algo):
 
 def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=None, mobile_key_pem_path = None, mobile_key_pass = None):
     privkeys = {}
-    chain_code = None
     players_data = defaultdict(dict)
     key_metadata_mapping = {}
 
@@ -184,7 +186,7 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
             raise RecoveryErrorMetadataNotFound(zip_path)
         with zipfile.open("metadata.json") as file:
             obj = json.loads(file.read())
-            chain_code = bytes.fromhex(obj["chainCode"])
+            default_chain_code = bytes.fromhex(obj["chainCode"])
             if "keys" in obj:
                 keys_in_backup = obj["keys"]
             else:
@@ -193,7 +195,16 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
             for key_id, key_metadata in keys_in_backup.items():
                 metadata_public_key = key_metadata["publicKey"]
                 algo = key_metadata["algo"]
-                key_metadata_mapping[key_id] = algo, metadata_public_key
+                # Some keys may have their own chaincode specified
+                # If a chaincode defintion exists for a specific key, use that.
+                # if not, use the "default" chaincode defined at the top of metadata.json
+                if "chainCode" in key_metadata:
+                    chain_code_for_this_key = bytes.fromhex(key_metadata["chainCode"])
+                else:
+                    chain_code_for_this_key = default_chain_code
+                if len(chain_code_for_this_key) != 32:
+                        raise RecoveryErrorUnknownChainCode()
+                key_metadata_mapping[key_id] = algo, metadata_public_key, chain_code_for_this_key
 
         for name in zipfile.namelist():
             with zipfile.open(name) as file:
@@ -248,6 +259,7 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
 
     for key_id, key_players_data in players_data.items():
         algo = key_metadata_mapping[key_id][0]
+        chain_code_for_this_key = key_metadata_mapping[key_id][2]
         privkey, pubkey_str = calculate_keys(key_id, key_players_data, algo)
         
         pub_from_metadata = key_metadata_mapping[key_id][1]
@@ -255,11 +267,11 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
             print(f"Failed to recover {algo} key, expected public key is: {pub_from_metadata} calculated public key is: {pubkey_str}")
             privkeys[algo] = None
         else:
-            privkeys[algo] = privkey
+            privkeys[algo] = privkey, chain_code_for_this_key
     
     if len(privkeys) == 0:
         raise RecoveryErrorPublicKeyNoMatch()
-    return privkeys, chain_code
+    return privkeys
 
 def get_public_key(algo, private_key):
     privkey = private_key
