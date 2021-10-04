@@ -287,15 +287,8 @@ def get_public_key(algo, private_key):
         raise RecoveryErrorUnknownAlgorithm(algo)
 
 def restore_private_key(zip_path, private_pem_path, passphrase, key_pass=None):
-    return restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass)[0]
+    return restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass)
 
-def restore_chaincode(zip_path):
-    with ZipFile(zip_path, 'r') as zipfile:
-        if "metadata.json" not in zipfile.namelist():
-            raise RecoveryErrorMetadataNotFound(zip_path)
-        with zipfile.open("metadata.json") as file:
-            obj = json.loads(file.read())
-            return bytes.fromhex(obj["chainCode"])
 
 def encode_extended_key(algo, key, chain_code, is_pub):
     if type(key) == int:
