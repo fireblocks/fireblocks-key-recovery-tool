@@ -208,10 +208,8 @@ class Point:
         if self == self.IDENTITY_ELEMENT:
             return "00"
 
-        x = hex(self.x)[2:]
-        if(len(x) % 2 == 1):
-            x = "0" + x
-
+        x = self.x.to_bytes(32, 'big').hex()
+        
         if compressed:
             if self.y % 2:
                 prefix = "03"
@@ -220,9 +218,7 @@ class Point:
 
             return prefix + x
         else:
-            y = hex(self.y)[2:]
-            if(len(y) % 2 == 1):
-                y = "0" + y
+            y = self.y.to_bytes(32, 'big').hex()
             return "04" + x + y
     
     @staticmethod
