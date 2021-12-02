@@ -131,6 +131,27 @@ def test_two_custom_chaincode_recovery():
     assert(recover.encode_extended_key('MPC_EDDSA_ED25519', pub, eddsa_chaincode, True) == "fpub8sZZXw2wbqVpUre3dRVwWsikRcjUb3CTaHrU9BpoaYr6iGbHGhYPNVYr717NEs15Sjx7Uun6zj2WmGskXQP6Ed9udZYNcUYMeff9hsYTcyr")
     print("recovery OK")
 
+def test_recovery_with_mobile_share_as_json():
+    result = recover.restore_key_and_chaincode("json_share.zip", "priv.pem", "Fireblocks1!")
+    ecdsa_priv_key, ecdsa_chaincode = result['MPC_CMP_ECDSA_SECP256K1']
+    eddsa_priv_key, eddsa_chaincode = result['MPC_EDDSA_ED25519']
+
+    assert(ecdsa_priv_key == 0x83af98f2f2bdea33eb34177b311d89569725a401c1fc4d6046d266b1ca0dc382)
+    assert(eddsa_priv_key == 0xd5c4d44f0f07aaa0bf18e039f28ec2131935ed696636f48ec46bab58e66296b)
+
+    assert(ecdsa_chaincode == bytes.fromhex('b72ad958e75f981589e172fd40cad7536c4b04e5d2866f5a5ec53ce6ed12865a'))
+    assert(eddsa_chaincode == bytes.fromhex('b72ad958e75f981589e172fd40cad7536c4b04e5d2866f5a5ec53ce6ed12865a'))
+
+    pub = recover.get_public_key("MPC_ECDSA_SECP256K1", ecdsa_priv_key)
+    assert(pub == "026bd67069ae5324d49e929a43deb35942531ab9e5b5dd04eaa40a8382f5a1bcdb")
+    assert(recover.encode_extended_key('MPC_ECDSA_SECP256K1', ecdsa_priv_key, ecdsa_chaincode, False) == "xprv9s21ZrQH143K3t8KzyhL6Vme2HdTM5NitiiLLurTdwUUeKuquVi5QFxz4BwXHdp7Pj1efmkgzPSJp92nTPTMsE7sqABVrAnfgcU9yWYxaNL")
+    assert(recover.encode_extended_key('MPC_ECDSA_SECP256K1', pub, ecdsa_chaincode, True) == "xpub661MyMwAqRbcGNCo71ELTdiNaKTwkY6aFwdw9JG5CH1TX8EzT32Kx4HTuSnnZHg2d2GEsHt8ZHSEGC68mSxcfkA1xaqKzAgSPAHz11yytGK")
+    pub = recover.get_public_key("MPC_EDDSA_ED25519", eddsa_priv_key)
+    assert(pub == "001d0a110282f7e440ca24abfd1fcc785c1325cf9e87a0e87a3d3db17f83dc6f49")
+    assert(recover.encode_extended_key('MPC_EDDSA_ED25519', eddsa_priv_key, eddsa_chaincode, False) == "fprv4LsXPWzhTTp9bqsKptKiZ1A66q9rLXXFKorb3CeQBq4Wjd4xcJuWqBndhfkSrMeRaojHBsEv7HoHuGGn5uqWQ43MZFTfuYB6gQgGTdGggTm")
+    assert(recover.encode_extended_key('MPC_EDDSA_ED25519', pub, eddsa_chaincode, True) == "fpub8sZZXw2wbqVpVJu7iXzJxQpCfrfnVri9u7TNKighc6rua7KjEhj71gQVsivkxG6tV5xNmXLrU3EpaRP8cJZhk9otAfzsZwJsjEqGCjmWEg8")
+    print("recovery OK")
+
 if __name__ == '__main__':
     test_recovery()
     test_full_recovery()
@@ -138,4 +159,5 @@ if __name__ == '__main__':
     test_cmp_recovery()
     test_one_custom_chaincode_recovery()
     test_two_custom_chaincode_recovery()
+    test_recovery_with_mobile_share_as_json()
 

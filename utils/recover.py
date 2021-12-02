@@ -230,6 +230,14 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
                                 raise RecoveryErrorMobileRSADecrypt()
                     except ValueError:
                         raise RecoveryErrorMobileKeyDecrypt()
+
+                    # if the dycrypted data is a json object try to decode it and use the "key" value
+                    try:
+                        recover_data_object = json.loads(data.decode())
+                        data = bytearray.fromhex(recover_data_object['key'])
+                    except:
+                        pass
+
                     if len(data) == 36: # the first 4 bytes encode the algorithm, and the rest is the private share
                         algo = int.from_bytes(data[:4], byteorder='little')
                         if algorithm_enum_mapping[key_metadata_mapping[key_id][0]] != algo:
