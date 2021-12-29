@@ -307,6 +307,7 @@ class CardanoWallet:
             self.get_account_addresses(), True
         )
 
+
     def __find_max_address_index(self, address_pool_gap: int) -> int:
         if address_pool_gap <= 0:
             raise Exception(f'Invalid address_pool_gap value of {address_pool_gap}')
@@ -379,10 +380,7 @@ class CardanoWallet:
         if change_amount > 0:
             outputs_arr.append([self.__decode_address(change_address), change_amount])
 
-        deserialized = {
-            0: inputs_arr, 1: outputs_arr, 2: fee_amount, 3: ttl
-        }
-
+        deserialized = {0: inputs_arr, 1: outputs_arr, 2: fee_amount, 3: ttl}
         return cbor2.dumps(deserialized), deserialized
 
 
