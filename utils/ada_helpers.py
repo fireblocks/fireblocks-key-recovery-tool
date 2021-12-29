@@ -274,6 +274,8 @@ class CardanoWallet:
             fee_amount = DEFAULT_NATIVE_TX_FEE
 
         for utxo in all_utxos:
+            if len(utxo.tokens) > 0:
+                continue
             collected_utxos.append(utxo)
             collected_native_amount += utxo.native_amount
             if collected_native_amount >= net_amount + fee_amount:
