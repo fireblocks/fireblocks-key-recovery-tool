@@ -1,9 +1,9 @@
-import typing
 from utils import eddsa_sign
-from typing import List, NamedTuple, Set
+from typing import List, NamedTuple, Set, Callable, Union
 import cbor2
 import hashlib
 import bech32
+import requests
 from gql import gql, Client
 from gql.transport.requests import RequestsHTTPTransport
 
@@ -12,7 +12,7 @@ ADA_COIN_TYPE = 1815
 CHANGE_INDEX = 0
 CHIMERIC_INDEX = 2
 DEFAULT_MIN_ADDRESS_INDEX = 0
-DEFAULT_ADDRESS_GAP_POOL = 1000
+DEFAULT_ADDRESS_GAP_POOL = 20
 MIN_UTXO_VALUE_ADA_ONLY = 1000000
 DEFAULT_NATIVE_TX_FEE = 1000000  # Over-estimate
 TX_TTL_SECS = 7200  # 2 Hours
@@ -46,70 +46,57 @@ class CardanoBalanceMap:
     def __init__(self):
         self.__dict = dict()
 
-    def increase_balance(self, k: str, v: int):
+    def increase_balance(self, k: str, v: int) -> None:
         if k in self.__dict:
             self.__dict[k] += v
         else:
             self.__dict[k] = v
 
-    def get_balance_of(self, k: str):
+    def get_balance_of(self, k: str) -> int:
         if k in self.__dict:
             return self.__dict[k]
         return 0
 
-    def size(self):
+    def assets(self) -> List[str]:
+        keys = []
+        for k, v in self.__dict.items():
+            keys.append(k)
+        return keys
+
+    def size(self) -> int:
         return len(self.__dict)
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
         return self.size() == 0
 
 
 class CardanoGQLClient:
-    def __init__(self, gql_server_url: str):
-        self.__gql_client = \
-            Client(transport=RequestsHTTPTransport(url=gql_server_url), fetch_schema_from_transport=True)
+    def __init__(self, gql_server_url: str, server_caller: Union[Callable, None]):
+        self.__gql_server_url = gql_server_url
+        if server_caller is None:
+            self.__gql_server_caller = CardanoGQLClient.__default_client_caller
+        else:
+            self.__gql_server_caller = server_caller
+
 
     def get_current_slot(self) -> int:
-        query = gql(r'''query { cardano { tip { slotNo } } }''')
-        result = self.__gql_client.execute(query)
+        query = r'''query { cardano { tip { slotNo } } }'''
+        result = self.__gql_server_caller(self.__gql_server_url, query)
         if 'cardano' in result and 'tip' in result['cardano'] and 'slotNo' in result['cardano']['tip']:
             return result['cardano']['tip']['slotNo']
         else:
             raise Exception(f'Bad response from GQL: {result}')
 
     def submit_tx(self, signed_tx: bytes) -> str:
-        query = gql(r'''mutation SendRawTx($rawtx: String!) {submitTransaction(transaction: $rawtx) {hash}}''')
-        result = self.__gql_client.execute(query, variable_values={'rawtx': signed_tx.hex()})
+        query = r'''mutation SendRawTx($rawtx: String!) {submitTransaction(transaction: $rawtx) {hash}}'''
+        result = self.__gql_server_caller(self.__gql_server_url, query, {'rawtx': signed_tx.hex()})
         if 'submitTransaction' in result and 'hash' in result['submitTransaction']:
             return result['submitTransaction']['hash']
         else:
             raise Exception(f'Bad response from gql: {result}')
 
     def get_utxos(self, addresses: List[CardanoAddress], native_only: bool) -> List[CardanoUTxO]:
-        query = gql(r'''query utxoSetForAddresses (
-                            $addresses: [String]!
-                        ) {
-                            utxos(
-                                where: { address: { _in: $addresses }}
-                            ) {
-                                address
-                                transaction {
-                                    block {
-                                        number
-                                    }
-                                }
-                                tokens {
-                                    asset {
-                                        name
-                                        ticker
-                                    }
-                                    quantity
-                                }
-                                txHash
-                                index
-                                value
-                            }
-                        }''')
+        query = r'''query utxoSetForAddresses ( $addresses: [String]!) { utxos( where: { address: { _in: $addresses }} ) { address transaction { block { number } } tokens { asset { name ticker } quantity } txHash index value } }'''
 
         addresses_str_arr = []
         addresses_index_map = dict()
@@ -117,7 +104,7 @@ class CardanoGQLClient:
             addresses_str_arr.append(address.address)
             addresses_index_map[address.address] = address.derivation_index
 
-        result = self.__gql_client.execute(query, variable_values={'addresses': addresses})
+        result = self.__gql_server_caller(self.__gql_server_url, query, {'addresses': addresses_str_arr})
 
         if 'utxos' not in result:
             raise Exception(f'Bad response from GQL: {result}')
@@ -151,10 +138,28 @@ class CardanoGQLClient:
 
         return utxos
 
+    @staticmethod
+    def __default_client_caller(gql_server_url: str, query_str: str, params: Union[dict, None] = None):
+        gql_client = Client(transport=RequestsHTTPTransport(url=gql_server_url), fetch_schema_from_transport=True)
+        return gql_client.execute(gql(query_str), params)
+
+    @staticmethod
+    def http_post_request_caller(gql_server_url: str, queryStr: str, params: Union[dict, None] = None):
+        return requests.post(
+            gql_server_url,
+            headers={
+                'Content-Type': 'application/json'
+            },
+            json={
+                'query': str(queryStr),
+                'params': str(params).replace("\'", "\"") if params else None
+            }
+        ).json()
+
 
 class CardanoWallet:
-    def __init__(self, fpub: str, account: int, min_address_index: typing.Union[int, None],
-                 max_address_index: typing.Union[int, None], gql_client: CardanoGQLClient, mainnet: bool):
+    def __init__(self, fpub: str, account: int, min_address_index: Union[int, None],
+                 max_address_index: Union[int, None], gql_client: CardanoGQLClient, mainnet: bool):
         if account < 0:
             raise Exception(f'Invalid account value of {account}')
 
@@ -169,7 +174,7 @@ class CardanoWallet:
             self.__coin_type = 1
 
         if min_address_index is None:
-            self.__max_address_index = DEFAULT_MIN_ADDRESS_INDEX
+            self.__min_address_index = DEFAULT_MIN_ADDRESS_INDEX
         else:
             self.__min_address_index = min_address_index
 
@@ -184,10 +189,10 @@ class CardanoWallet:
 
         if self.__max_address_index < 0:
             raise Exception(f'Invalid max_address_index value of {self.__max_address_index}'
-                            f'(max: {self.__min_address_index})')
+                            f'(min: {self.__min_address_index})')
 
 
-    def reset_address_index_range(self, address_pool_gap: typing.Union[int, None]):
+    def reset_address_index_range(self, address_pool_gap: Union[int, None]) -> [int, int]:
         if address_pool_gap is None:
             address_pool_gap = DEFAULT_ADDRESS_GAP_POOL
         elif address_pool_gap <= 0:
@@ -258,7 +263,7 @@ class CardanoWallet:
 
 
     def do_native_transfer(self, fpriv: str, to_address: str, net_amount: int,
-                           fee_amount: typing.Union[int, None]) -> str:
+                           fee_amount: Union[int, None]) -> str:
         if net_amount < MIN_UTXO_VALUE_ADA_ONLY:
             raise Exception(f'Amount is lower than dust ({net_amount} < {MIN_UTXO_VALUE_ADA_ONLY})')
 
@@ -269,17 +274,20 @@ class CardanoWallet:
             fee_amount = DEFAULT_NATIVE_TX_FEE
 
         for utxo in all_utxos:
-            if len(utxo.tokens) > 0:
-                continue
             collected_utxos.append(utxo)
             collected_native_amount += utxo.native_amount
             if collected_native_amount >= net_amount + fee_amount:
-                break
+                change_amount = collected_native_amount - net_amount - fee_amount
+                if (change_amount == 0) or (change_amount >= MIN_UTXO_VALUE_ADA_ONLY):
+                    break
 
         if collected_native_amount < net_amount + fee_amount:
             raise Exception(f'Insufficient Balance in account ({collected_native_amount} < {net_amount + fee_amount})')
 
         change_amount = collected_native_amount - net_amount - fee_amount
+        if 0 < change_amount < MIN_UTXO_VALUE_ADA_ONLY:
+            raise Exception(f'Change output below minimum {change_amount} < {MIN_UTXO_VALUE_ADA_ONLY}')
+
         change_address = self.get_base_address(0)
         serialized_tx_payload, deserialized_tx_payload = self.__build_tx_payload(
             to_address, net_amount, collected_utxos, change_amount, change_address.address,
@@ -290,11 +298,6 @@ class CardanoWallet:
         sigs = self.__sign_tx_payload(fpriv, collected_utxos, signing_payload)
         signed_tx, _ = CardanoWallet.__embed_sigs_in_tx(deserialized_tx_payload, sigs)
         return self.__gql_client.submit_tx(signed_tx)
-
-
-    @staticmethod
-    def __get_signing_payload(serialized_tx: bytes) -> bytes:
-        return CardanoWallet.__blake_hash(serialized_tx, 32)
 
 
     def __get_utxos_for_account(self) -> List[CardanoUTxO]:
@@ -317,7 +320,11 @@ class CardanoWallet:
             curr_gap = curr_gap + 1 if curr_balance.is_empty() else 0
             curr_address_idx += 1
 
-        return curr_address_idx
+        max_index = curr_address_idx - address_pool_gap - 1
+        if max_index < 0:
+            raise Exception(f'Failed to find max index')
+
+        return max_index
 
 
     def __get_balance_for_addresses(self, addresses: List[CardanoAddress]) -> CardanoBalanceMap:
@@ -329,30 +336,30 @@ class CardanoWallet:
         return balances_map
 
 
-    def __get_address_hrp(self):
+    def __get_address_hrp(self) -> str:
         return 'addr' if self.__mainnet else 'addr_test'
 
 
-    def __encode_address(self, decoded_address: bytes):
+    def __encode_address(self, decoded_address: bytes) -> str:
         return bech32.bech32_encode(
             self.__get_address_hrp(),
             bech32.convertbits(decoded_address, 8, 5, True)
         )
 
 
-    def __decode_address(self, encoded_address: str):
-        if self.__get_address_hrp() not in encoded_address:
+    def __decode_address(self, encoded_address: str) -> bytes:
+        if f'{self.__get_address_hrp()}1' not in encoded_address:
             raise Exception(f'Address {encoded_address} is invalid (use Shelley-era addresses)')
 
         _, decoded = bech32.bech32_decode(encoded_address)
-        return bech32.convertbits(decoded, 5, 8, False)
+        return bytes(bech32.convertbits(decoded, 5, 8, False))
 
 
-    def __base_address_bytes_prefix(self):
+    def __base_address_bytes_prefix(self) -> bytes:
         return bytearray.fromhex('01' if self.__mainnet else '00')
     
     
-    def __payment_address_bytes_prefix(self):
+    def __payment_address_bytes_prefix(self) -> bytes:
         return bytearray.fromhex('61' if self.__mainnet else '60')
 
 
@@ -371,7 +378,7 @@ class CardanoWallet:
             outputs_arr.append([self.__decode_address(change_address), change_amount])
 
         deserialized = {
-            0: inputs_arr, 1: outputs_arr, 3: fee_amount, 4: ttl
+            0: inputs_arr, 1: outputs_arr, 2: fee_amount, 3: ttl
         }
 
         return cbor2.dumps(deserialized), deserialized
@@ -381,8 +388,8 @@ class CardanoWallet:
         sigs = []
         for signing_index in CardanoWallet.__get_signing_indices(tx_inputs):
             witness_key_path = f'{BIP_44_CONSTANT}/{self.__coin_type}/{self.__account}/{CHANGE_INDEX}/{signing_index}'
-            witness_pub_key = eddsa_sign.eddsa_derive(self.__fpub, witness_key_path)
-            witness_prv_key = eddsa_sign.eddsa_derive(fpriv.encode('utf-8'), witness_key_path)
+            _, witness_pub_key = eddsa_sign.eddsa_derive(self.__fpub, witness_key_path)
+            witness_prv_key, _ = eddsa_sign.eddsa_derive(fpriv.encode('utf-8'), witness_key_path)
             witness_sig = eddsa_sign.eddsa_sign(witness_prv_key, tx_payload)
             sigs.append(CardanoWitness(witness_pub_key, witness_sig))
         return sigs
@@ -397,6 +404,11 @@ class CardanoWallet:
 
 
     @staticmethod
+    def __get_signing_payload(serialized_tx: bytes) -> bytes:
+        return CardanoWallet.__blake_hash(serialized_tx, 32)
+
+
+    @staticmethod
     def __embed_sigs_in_tx(deserialized_tx_payload: dict, sigs: List[CardanoWitness]) -> [bytes, str]:
         witnesses_arr = []
         for sig in sigs:
@@ -406,15 +418,25 @@ class CardanoWallet:
 
 
     @staticmethod
-    def __blake_hash(payload: bytes, digest_size=28):
+    def __blake_hash(payload: bytes, digest_size=28) -> bytes:
         h = hashlib.blake2b(digest_size=digest_size)
         h.update(payload)
         return h.digest()
 
 
+class CardanoWalletFactory:
+    def __init__(self, fpub: str, gql_client: CardanoGQLClient, mainnet: bool = True):
+        self.__fpub = fpub
+        self.__gql_client = gql_client
+        self.__mainnet = mainnet
 
+    def create_by_indices(self, account: int,
+                          min_address_index: Union[int, None],
+                          max_address_index: Union[int, None]) -> CardanoWallet:
+        return CardanoWallet(self.__fpub, account, min_address_index, max_address_index,
+                             self.__gql_client, self.__mainnet)
 
-my_fpub = 'fpub8sZZXw2wbqVpUChBh7QemkuqUMggMBVsZQyyX5z9T9medHXL7WkVCiimqcNySaeT5m5tGZG32yyAAEzbHVgEhgngkBMnTW9ybhhKVUTH7V7'
-cw = CardanoWallet(my_fpub, 0, 0, 1, CardanoGQLClient(''), False)
-print(cw.get_enterprise_address(1).address)
-print(cw.get_base_address(1).derivation_index)
+    def create_by_address_pool_gap(self, account: int, address_pool_gap: int) -> CardanoWallet:
+        cw = CardanoWallet(self.__fpub, account, 0, 0, self.__gql_client, self.__mainnet)
+        cw.reset_address_index_range(address_pool_gap)
+        return cw
