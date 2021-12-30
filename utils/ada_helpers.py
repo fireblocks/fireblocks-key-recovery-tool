@@ -9,6 +9,7 @@ from gql.transport.requests import RequestsHTTPTransport
 
 BIP_44_CONSTANT = 44
 ADA_COIN_TYPE = 1815
+ADA_TEST_COIN_TYPE = 1
 CHANGE_INDEX = 0
 CHIMERIC_INDEX = 2
 DEFAULT_MIN_ADDRESS_INDEX = 0
@@ -119,14 +120,15 @@ class CardanoGQLClient:
 
                 utxo_address = utxo['address']
                 utxo_tokens = []
-                for token in utxo['tokens']:
-                    if 'quantity' in token and 'asset' in token \
-                            and 'name' in token['asset'] and 'ticker' in token['asset']:
-                        utxo_tokens.append(CardanoToken(
-                            token['asset']['name'],
-                            token['asset']['ticker'],
-                            int(token['quantity'])
-                        ))
+                if has_tokens:
+                    for token in utxo['tokens']:
+                        if 'quantity' in token and 'asset' in token \
+                                and 'name' in token['asset'] and 'ticker' in token['asset']:
+                            utxo_tokens.append(CardanoToken(
+                                token['asset']['name'],
+                                token['asset']['ticker'],
+                                int(token['quantity'])
+                            ))
 
                 utxos.append(CardanoUTxO(
                     bytearray.fromhex(utxo['txHash']),
@@ -172,7 +174,11 @@ class CardanoWallet:
         if mainnet:
             self.__coin_type = ADA_COIN_TYPE
         else:
-            self.__coin_type = 1
+            self.__coin_type = ADA_TEST_COIN_TYPE
+
+        if (min_address_index is None and max_address_index is not None) or \
+                (min_address_index is not None and max_address_index is None):
+            raise Exception(f'min_address_index and max_address_index should both be None or both have value')
 
         if min_address_index is None:
             self.__min_address_index = DEFAULT_MIN_ADDRESS_INDEX
@@ -184,13 +190,10 @@ class CardanoWallet:
         else:
             self.__max_address_index = max_address_index
 
-        if self.__min_address_index < 0 or self.__max_address_index < self.__min_address_index:
-            raise Exception(f'Invalid min_address_index value of {self.__min_address_index} '
-                            f'(max: {self.__max_address_index})')
-
-        if self.__max_address_index < 0:
-            raise Exception(f'Invalid max_address_index value of {self.__max_address_index}'
-                            f'(min: {self.__min_address_index})')
+        if self.__min_address_index < 0 or \
+                self.__max_address_index < 0 or \
+                self.__max_address_index < self.__min_address_index:
+            raise Exception(f'Invalid address indices ({self.__min_address_index}, {self.__max_address_index})')
 
 
     def reset_address_index_range(self, address_pool_gap: Union[int, None]) -> [int, int]:
