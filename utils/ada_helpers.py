@@ -167,6 +167,7 @@ class CardanoWallet:
         self.__account = account
         self.__gql_client = gql_client
         self.__mainnet = mainnet
+        self.__addresses = []
 
         if mainnet:
             self.__coin_type = ADA_COIN_TYPE
@@ -246,6 +247,9 @@ class CardanoWallet:
 
 
     def get_account_addresses(self) -> List[CardanoAddress]:
+        if len(self.__addresses) > 0:
+            return self.__addresses
+
         addresses = []
         addresses_size = self.__max_address_index + 1
 
@@ -253,6 +257,7 @@ class CardanoWallet:
             addresses.append(self.get_base_address(i))
             addresses.append(self.get_enterprise_address(i))
 
+        self.__addresses = addresses
         return addresses
 
 
@@ -325,7 +330,8 @@ class CardanoWallet:
 
         max_index = curr_address_idx - address_pool_gap - 1
         if max_index < 0:
-            raise Exception(f'Failed to find max index')
+            raise Exception(f'Failed to find max index for address_pool_gap of {address_pool_gap} '
+                            f'(is the wallet empty?)')
 
         return max_index
 
@@ -387,11 +393,14 @@ class CardanoWallet:
     def __sign_tx_payload(self, fpriv: str, tx_inputs: List[CardanoUTxO], tx_payload: bytes) -> List[CardanoWitness]:
         sigs = []
         for signing_index in CardanoWallet.__get_signing_indices(tx_inputs):
-            witness_key_path = f'{BIP_44_CONSTANT}/{self.__coin_type}/{self.__account}/{CHANGE_INDEX}/{signing_index}'
-            _, witness_pub_key = eddsa_sign.eddsa_derive(self.__fpub, witness_key_path)
-            witness_prv_key, _ = eddsa_sign.eddsa_derive(fpriv.encode('utf-8'), witness_key_path)
+            witness_prv_key, witness_pub_key = eddsa_sign.eddsa_derive(
+                fpriv.encode('utf-8'),
+                f'{BIP_44_CONSTANT}/{self.__coin_type}/{self.__account}/{CHANGE_INDEX}/{signing_index}'
+            )
+
             witness_sig = eddsa_sign.eddsa_sign(witness_prv_key, tx_payload)
             sigs.append(CardanoWitness(witness_pub_key, witness_sig))
+
         return sigs
 
 
