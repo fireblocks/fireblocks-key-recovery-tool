@@ -1,5 +1,4 @@
 import base58
-import base64
 import math
 from typing import List, Union
 
