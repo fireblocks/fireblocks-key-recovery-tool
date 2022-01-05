@@ -69,3 +69,4 @@ def withdraw_from_account(xpriv: str, account: int, to_address : str, amount: fl
     path = f'{BIP_44_CONSTANT}/{SOL_ASSET_NUM}/{account}/{CHANGE}/{ADDR_INDEX}'
     priv, pub = eddsa_sign.eddsa_derive(xpriv, path)
     return withdraw(priv, pub, to_address, sol_to_lamports(amount))
+    
