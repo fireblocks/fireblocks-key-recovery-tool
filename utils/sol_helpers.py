@@ -29,7 +29,7 @@ def withdraw(priv, pub, to_address, amount):
     txn.add_signature(from_address, signature)
     encoded_serialized_txn = txn.serialize()
     response = solana_client.send_raw_transaction(encoded_serialized_txn) 
-    print(f'Response from blockchain: {response}')
+    print(f'Response is: {response}')
 
 def get_blockhash():
     solana_client = Client(URL)
@@ -42,12 +42,12 @@ def get_blockhash():
     return blockhash
 
 
-def getBalance(self, addr: Union[bytearray, bytes, int, str, List[int]]) -> str:
+def get_balance(addr: Union[bytearray, bytes, int, str, List[int]]) -> str:
     solana_client = Client(URL)
     balance_response = solana_client.get_balance(PublicKey(addr)) 
     try:
         balance = balance_response['result']['value']
-        return balance
+        return f'Balance is: {balance} lamports'
     except KeyError as e:
         print(f'falied to retrieve balance for {addr}, with error {e}')
 
