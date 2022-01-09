@@ -10,6 +10,8 @@ ALGO_ASSET_NUM = 283
 CHANGE = 0
 ADDR_INDEX = 0
 
+# change the following settings to your Algorand node's URL and its token
+# these settings work with the Algorand Sandbox: https://github.com/algorand/sandbox
 algod_address = "http://localhost:4001"
 algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 algod_client = algod.AlgodClient(algod_token, algod_address)
