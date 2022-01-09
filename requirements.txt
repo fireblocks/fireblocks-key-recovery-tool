@@ -2,3 +2,4 @@ pytest==6.2.5
 pycryptodome==3.11.0
 termcolor==1.1.0
 substrate-interface==1.1.1
+solana==0.19.1
