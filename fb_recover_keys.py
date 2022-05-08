@@ -80,11 +80,11 @@ def main():
         passphrase = getpass.getpass(prompt='Please enter mobile recovery passphrase:')
     else:
         with open(args.mobile_key, 'r') as _key:
-            if 'ENCRYPTED' in _key.readlines()[1]:
+            if 'ENCRYPTED' in ''.join(_key.readlines()[0:2]):
                 mobile_key_pass = getpass.getpass(prompt='Please enter mobile recovery RSA private key passphrase:')
 
     with open(args.key, 'r') as _key:
-        if 'ENCRYPTED' in _key.readlines()[1]:
+        if 'ENCRYPTED' in ''.join(_key.readlines()[0:2]):
             key_pass = getpass.getpass(prompt='Please enter recovery RSA private key passphrase:')
         else:
             key_pass = None
