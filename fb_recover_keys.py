@@ -84,7 +84,10 @@ def main():
                 mobile_key_pass = getpass.getpass(prompt='Please enter mobile recovery RSA private key passphrase:')
 
     with open(args.key, 'r') as _key:
-        if 'ENCRYPTED' in _key.readlines()[1]:
+        key_file = _key.readlines();
+        if 'ENCRYPTED' in key_file[0]:
+            key_pass = getpass.getpass(prompt='Please enter recovery RSA private key passphrase:')
+        elif 'ENCRYPTED' in key_file[1]:
             key_pass = getpass.getpass(prompt='Please enter recovery RSA private key passphrase:')
         else:
             key_pass = None
