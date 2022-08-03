@@ -6,4 +6,3 @@ py-algorand-sdk==1.8.0
 solana==0.19.1
 stellar_base==1.1.2.0
 gql==3.4.0
-py-algorand-sdk==1.16.0
