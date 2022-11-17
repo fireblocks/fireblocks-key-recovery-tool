@@ -137,12 +137,31 @@ def lagrange_coefficient(my_id, ids, field):
     return coefficient
 
 def calculate_keys(key_id, player_to_data, algo):
+    result = defaultdict(dict)
+    result["algo"] = algo
     if algo == "MPC_ECDSA_SECP256K1":
         privkey = 0
         for key, value in player_to_data.items():
-            privkey = (privkey + value * lagrange_coefficient(key, player_to_data.keys(), secp256k1.q)) % secp256k1.q
-
+            coeff = lagrange_coefficient(key, player_to_data.keys(), secp256k1.q)
+            privkey = (privkey + value * coeff) % secp256k1.q
+            
+            # get private and public key for a specific shard
+            this_priv = (value * coeff) % secp256k1.q
+            this_pub = secp256k1.G * this_priv
+            
+            # write to result dict
+            result[key]["pubkey"] = this_pub.serialize()
+            result[key]["privkey"] = this_priv
+            
         pubkey = secp256k1.G * privkey
+        result["pubkey"] = pubkey.serialize()
+        result["privkey"] = privkey
+        result[key]["coeff"] = coeff
+        
+        # dump to json file
+        with open("output.json", "w") as f:
+            json.dump(result, f)
+            
         return privkey, pubkey.serialize()
     elif algo == "MPC_EDDSA_ED25519":
         privkey = 0
@@ -167,6 +186,7 @@ def calculate_keys(key_id, player_to_data, algo):
         return privkey, _ed25519_point_serialize(pubkey)
     else:
         raise RecoveryErrorUnknownAlgorithm(algo)
+    
 
 def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=None, mobile_key_pem_path = None, mobile_key_pass = None):
     privkeys = {}
@@ -208,6 +228,7 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
 
         for name in zipfile.namelist():
             with zipfile.open(name) as file:
+                print(f"using file: {name}\n")
                 if name.startswith("MOBILE"):
                     obj = json.loads(file.read())
                     key_id = obj["keyId"]
@@ -269,6 +290,9 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
         algo = key_metadata_mapping[key_id][0]
         chain_code_for_this_key = key_metadata_mapping[key_id][2]
         privkey, pubkey_str = calculate_keys(key_id, key_players_data, algo)
+        
+        # print(key_id)
+        # print(f"Private key: {privkey}\nPublic key: {pubkey_str}\nKey ID: {key_id}\nPlayer: {key_players_data}")
         
         pub_from_metadata = key_metadata_mapping[key_id][1]
         if (pub_from_metadata != pubkey_str):
