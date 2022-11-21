@@ -136,51 +136,66 @@ def lagrange_coefficient(my_id, ids, field):
         coefficient *= tmp
     return coefficient
 
-def calculate_keys(key_id, player_to_data, algo):
+# get private key, public key, and lagrange coefficient all 3 shards
+def extract_keys_from_shard(player_to_data, algo):
     result = defaultdict(dict)
-    result["algo"] = algo
+    if algo == "MPC_ECDSA_SECP256K1":
+        for key, value in player_to_data.items():
+            result[value]["coeff"] = lagrange_coefficient(key, player_to_data.keys(), secp256k1.q)
+            result[value]["priv"] = (value * result[value]["coeff"]) % secp256k1.q
+            result[value]["publ"] = (secp256k1.G * result[value]["priv"]).serialize()
+        
+        return result
+    elif algo == "MPC_EDDSA_ED25519":
+        for key, value in player_to_data.items():
+            result[value]["coeff"] = lagrange_coefficient(key, player_to_data.keys(), ed25519.l)
+            result[value]["priv"] = priv_key = (value * result[value]["coeff"]) % ed25519.l
+            result[value]["publ"] = ed25519.scalarmult(ed25519.B, result[value]["priv"])
+
+        return result
+    elif algo == "MPC_CMP_ECDSA_SECP256K1":
+        for key, value in player_to_data.items():
+            result[value]["priv"] = value % secp256k1.q
+            result[value]["publ"] = secp256k1.G * result[value]["priv"]
+    
+        return result
+    elif algo == "MPC_CMP_EDDSA_ED25519":
+        for key, value in player_to_data.items():
+            result[value]["priv"] = value % ed25519.l
+            result[value]["publ"] = ed25519.scalarmult(ed25519.B, result[value]["priv"])
+
+        return result
+    else:
+        raise RecoveryErrorUnknownAlgorithm(algo)
+
+# combine keys of all shards
+def calculate_keys(key_id, player_to_data, algo):
+    shard_keys = extract_keys_from_shard(player_to_data, algo)
     if algo == "MPC_ECDSA_SECP256K1":
         privkey = 0
-        for key, value in player_to_data.items():
-            coeff = lagrange_coefficient(key, player_to_data.keys(), secp256k1.q)
-            privkey = (privkey + value * coeff) % secp256k1.q
-            
-            # get private and public key for a specific shard
-            this_priv = (value * coeff) % secp256k1.q
-            this_pub = secp256k1.G * this_priv
-            
-            # write to result dict
-            result[key]["pubkey"] = this_pub.serialize()
-            result[key]["privkey"] = this_priv
+        for key, value in shard_keys.items():
+            privkey = (privkey + key * value["coeff"]) % secp256k1.q
             
         pubkey = secp256k1.G * privkey
-        result["pubkey"] = pubkey.serialize()
-        result["privkey"] = privkey
-        result[key]["coeff"] = coeff
-        
-        # dump to json file
-        with open("output.json", "w") as f:
-            json.dump(result, f)
-            
         return privkey, pubkey.serialize()
     elif algo == "MPC_EDDSA_ED25519":
         privkey = 0
-        for key, value in player_to_data.items():
-            privkey = (privkey + value * lagrange_coefficient(key, player_to_data.keys(), ed25519.l)) % ed25519.l
+        for key, value in shard_keys.items():
+            privkey = (privkey + key * value["coeff"]) % ed25519.l
 
         pubkey = ed25519.scalarmult(ed25519.B, privkey)
         return privkey, _ed25519_point_serialize(pubkey)
     if algo == "MPC_CMP_ECDSA_SECP256K1":
         privkey = 0
-        for key, value in player_to_data.items():
-            privkey = (privkey + value) % secp256k1.q
+        for key, value in shard_keys.items():
+            privkey = (privkey + key) % secp256k1.q
 
         pubkey = secp256k1.G * privkey
         return privkey, pubkey.serialize()
     elif algo == "MPC_CMP_EDDSA_ED25519":
         privkey = 0
-        for key, value in player_to_data.items():
-            privkey = (privkey + value) % ed25519.l
+        for key, value in shard_keys.items():
+            privkey = (privkey + key) % ed25519.l
 
         pubkey = ed25519.scalarmult(ed25519.B, privkey)
         return privkey, _ed25519_point_serialize(pubkey)
@@ -228,7 +243,6 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
 
         for name in zipfile.namelist():
             with zipfile.open(name) as file:
-                print(f"using file: {name}\n")
                 if name.startswith("MOBILE"):
                     obj = json.loads(file.read())
                     key_id = obj["keyId"]
