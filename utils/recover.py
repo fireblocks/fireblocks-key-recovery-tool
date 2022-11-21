@@ -149,7 +149,7 @@ def extract_keys_from_shard(player_to_data, algo):
     elif algo == "MPC_EDDSA_ED25519":
         for key, value in player_to_data.items():
             result[value]["coeff"] = lagrange_coefficient(key, player_to_data.keys(), ed25519.l)
-            result[value]["priv"] = priv_key = (value * result[value]["coeff"]) % ed25519.l
+            result[value]["priv"] = (value * result[value]["coeff"]) % ed25519.l
             result[value]["publ"] = ed25519.scalarmult(ed25519.B, result[value]["priv"])
 
         return result
