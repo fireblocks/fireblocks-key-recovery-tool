@@ -305,9 +305,6 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
         chain_code_for_this_key = key_metadata_mapping[key_id][2]
         privkey, pubkey_str = calculate_keys(key_id, key_players_data, algo)
         
-        # print(key_id)
-        # print(f"Private key: {privkey}\nPublic key: {pubkey_str}\nKey ID: {key_id}\nPlayer: {key_players_data}")
-        
         pub_from_metadata = key_metadata_mapping[key_id][1]
         if (pub_from_metadata != pubkey_str):
             print(f"Failed to recover {algo} key, expected public key is: {pub_from_metadata} calculated public key is: {pubkey_str}")
