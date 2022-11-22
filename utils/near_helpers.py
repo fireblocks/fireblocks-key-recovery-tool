@@ -8,8 +8,7 @@ from utils.eddsa_sign import eddsa_derive
 import base58
 
 NEAR_TO_YNEAR = 1000000000000000000000000
-# RPC_URL_NODE = "https://rpc.testnet.near.org" # Use your RPC NODE url or the official RPC Node https://docs.near.org/api/rpc/providers
-RPC_URL_NODE = "https://rpc.mainnet.near.org" # Use your RPC NODE url or the official RPC Node https://docs.near.org/api/rpc/providers
+RPC_URL_NODE = "" # Use your RPC NODE url or the official RPC Node https://docs.near.org/api/rpc/providers
 
 def hex_to_base58(hex_string):
     bytes_str = bytes.fromhex(hex_string)
