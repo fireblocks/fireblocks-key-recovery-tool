@@ -1,4 +1,4 @@
-from utils import ed25519
+from utils import eddsa_25519
 from Crypto import Random
 import hashlib
 import hmac
@@ -21,9 +21,9 @@ def _derive_next_key_level(pubkey, privkey, chaincode, child_num):
     hash = _hash_for_derive(pubkey, chaincode, child_num)
     derived_chaincode = hash[32:]
     exp = int.from_bytes(hash[:32], byteorder="big")
-    tmp_point = ed25519.scalarmult(ed25519.B, exp)
-    derived_pubkey = ed25519.edwards(pubkey, tmp_point)
-    derived_privkey = (privkey + exp) % ed25519.l
+    tmp_point = eddsa_25519.scalarmult(eddsa_25519.B, exp)
+    derived_pubkey = eddsa_25519.edwards(pubkey, tmp_point)
+    derived_privkey = (privkey + exp) % eddsa_25519.l
     return (derived_pubkey, derived_privkey, derived_chaincode)
 
 def eddsa_sign(private_key, message):
@@ -37,15 +37,15 @@ def eddsa_sign(private_key, message):
     sha.update(seed)
     sha.update(privkey.to_bytes(32, byteorder="little"))
     sha.update(message)
-    nonce = int.from_bytes(sha.digest(), byteorder="little") % ed25519.l
-    R = ed25519.scalarmult(ed25519.B, nonce)
-    A = ed25519.scalarmult(ed25519.B, privkey)
+    nonce = int.from_bytes(sha.digest(), byteorder="little") % eddsa_25519.l
+    R = eddsa_25519.scalarmult(eddsa_25519.B, nonce)
+    A = eddsa_25519.scalarmult(eddsa_25519.B, privkey)
     sha = hashlib.sha512()
     sha.update(_ed25519_serialize(R))
     sha.update(_ed25519_serialize(A))
     sha.update(message)
-    hram = int.from_bytes(sha.digest(), byteorder='little') % ed25519.l
-    s = (hram * privkey + nonce) % ed25519.l
+    hram = int.from_bytes(sha.digest(), byteorder='little') % eddsa_25519.l
+    s = (hram * privkey + nonce) % eddsa_25519.l
     return _ed25519_serialize(R) + s.to_bytes(32, byteorder="little")
 
 def eddsa_derive(fkey, derivation_path):
@@ -66,9 +66,9 @@ def eddsa_derive(fkey, derivation_path):
     chaincode = decoded_key[13:45]
     priv = int.from_bytes(decoded_key[46:], byteorder='big')
     if is_private:
-        pub = ed25519.scalarmult(ed25519.B, priv)
+        pub = eddsa_25519.scalarmult(eddsa_25519.B, priv)
     else:
-        pub = ed25519.decodepoint(priv.to_bytes(32, 'big'))
+        pub = eddsa_25519.decodepoint(priv.to_bytes(32, 'big'))
         priv = 0
 
     for index in path:
@@ -85,4 +85,4 @@ def fprv_eddsa_sig(fprv, derivation_path, message):
     return eddsa_sign(priv, message)
 
 def private_key_to_public_key(private_key):
-    return _ed25519_serialize(ed25519.scalarmult(ed25519.B, private_key))
+    return _ed25519_serialize(eddsa_25519.scalarmult(eddsa_25519.B, private_key))
