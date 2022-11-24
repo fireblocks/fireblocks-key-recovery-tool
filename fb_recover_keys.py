@@ -63,7 +63,7 @@ def main():
     parser.add_argument('--prv', default=False,
                         action='store_const', const=True,
                         help='Reveal private key')
-    parser.add_argument('--mobile-key', help='mobile RSA private key file', default=None)
+    parser.add_argument('--mobile_key', help='mobile RSA private key file', default=None)
     args = parser.parse_args()
 
     if not os.path.exists(args.backup):
@@ -72,7 +72,7 @@ def main():
     if not os.path.exists(args.key):
         print('RSA key: {} not found.'.format(args.key))
         exit(-1)
-    
+
     mobile_key_pass = None
     passphrase = None
 
@@ -95,16 +95,16 @@ def main():
         privkeys = recover.restore_key_and_chaincode(
             args.backup, args.key, passphrase, key_pass, args.mobile_key, mobile_key_pass)
     except recover.RecoveryErrorMobileKeyDecrypt:
-        print(colored("Failed to decrypt mobile Key. " + colored("Please make sure you have the mobile passphrase entered correctly.", attrs = ["bold"]), "cyan")) 
+        print(colored("Failed to decrypt mobile Key. " + colored("Please make sure you have the mobile passphrase entered correctly.", attrs = ["bold"]), "cyan"))
         exit(-1)
     except recover.RecoveryErrorRSAKeyImport:
-        print(colored("Failed to import RSA Key. " + colored("Please make sure you have the RSA passphrase entered correctly.", attrs = ["bold"]), "cyan")) 
+        print(colored("Failed to import RSA Key. " + colored("Please make sure you have the RSA passphrase entered correctly.", attrs = ["bold"]), "cyan"))
         exit(-1)
     except recover.RecoveryErrorMobileRSAKeyImport:
-        print(colored("Failed to import mobile RSA Key. " + colored("Please make sure you have the RSA passphrase entered correctly.", attrs = ["bold"]), "cyan")) 
+        print(colored("Failed to import mobile RSA Key. " + colored("Please make sure you have the RSA passphrase entered correctly.", attrs = ["bold"]), "cyan"))
         exit(-1)
     except recover.RecoveryErrorMobileRSADecrypt:
-        print(colored("Failed to decrypt mobile Key. " + colored("Please make sure you have the mobile private key entered correctly.", attrs = ["bold"]), "cyan")) 
+        print(colored("Failed to decrypt mobile Key. " + colored("Please make sure you have the mobile private key entered correctly.", attrs = ["bold"]), "cyan"))
         exit(-1)
 
 
