@@ -8,3 +8,4 @@ stellar_base==1.1.2.0
 gql==3.4.0
 cbor2==5.4.3
 bech32==1.2.0
+httpx>=0.23.0 # not directly required, pinned by Snyk to avoid a vulnerability
