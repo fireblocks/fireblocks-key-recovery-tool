@@ -8,7 +8,7 @@ from collections import defaultdict
 from .curve import secp256k1
 from .point import Point
 from .helper import encode_base58_checksum
-from utils import ed25519
+from utils import eddsa_25519
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Cipher import AES
@@ -147,9 +147,9 @@ def calculate_keys(key_id, player_to_data, algo):
     elif algo == "MPC_EDDSA_ED25519":
         privkey = 0
         for key, value in player_to_data.items():
-            privkey = (privkey + value * lagrange_coefficient(key, player_to_data.keys(), ed25519.l)) % ed25519.l
+            privkey = (privkey + value * lagrange_coefficient(key, player_to_data.keys(), eddsa_25519.l)) % eddsa_25519.l
 
-        pubkey = ed25519.scalarmult(ed25519.B, privkey)
+        pubkey = eddsa_25519.scalarmult(eddsa_25519.B, privkey)
         return privkey, _ed25519_point_serialize(pubkey)
     if algo == "MPC_CMP_ECDSA_SECP256K1":
         privkey = 0
@@ -161,9 +161,9 @@ def calculate_keys(key_id, player_to_data, algo):
     elif algo == "MPC_CMP_EDDSA_ED25519":
         privkey = 0
         for key, value in player_to_data.items():
-            privkey = (privkey + value) % ed25519.l
+            privkey = (privkey + value) % eddsa_25519.l
 
-        pubkey = ed25519.scalarmult(ed25519.B, privkey)
+        pubkey = eddsa_25519.scalarmult(eddsa_25519.B, privkey)
         return privkey, _ed25519_point_serialize(pubkey)
     else:
         raise RecoveryErrorUnknownAlgorithm(algo)
@@ -289,7 +289,7 @@ def get_public_key(algo, private_key):
         pubkey = secp256k1.G * privkey
         return pubkey.serialize()
     elif algo == "MPC_EDDSA_ED25519" or algo == "MPC_CMP_EDDSA_ED25519":
-        pubkey = ed25519.scalarmult(ed25519.B, privkey)
+        pubkey = eddsa_25519.scalarmult(eddsa_25519.B, privkey)
         return '00' + _ed25519_point_serialize(pubkey)
     else:
         raise RecoveryErrorUnknownAlgorithm(algo)
