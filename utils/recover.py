@@ -247,7 +247,7 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
                 elif name == "metadata.json":
                     continue
                 else:
-                    if '_' in name:                        
+                    if '_' in name:
                         cosigner_id, key_id = name.split('_')
                     else:
                         #backward compatibility: backup includes just one ECDSA key
@@ -269,14 +269,14 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
         algo = key_metadata_mapping[key_id][0]
         chain_code_for_this_key = key_metadata_mapping[key_id][2]
         privkey, pubkey_str = calculate_keys(key_id, key_players_data, algo)
-        
+
         pub_from_metadata = key_metadata_mapping[key_id][1]
         if (pub_from_metadata != pubkey_str):
             print(f"Failed to recover {algo} key, expected public key is: {pub_from_metadata} calculated public key is: {pubkey_str}")
             privkeys[algo] = None
         else:
             privkeys[algo] = privkey, chain_code_for_this_key
-    
+
     if len(privkeys) == 0:
         raise RecoveryErrorPublicKeyNoMatch()
     return privkeys
@@ -285,7 +285,7 @@ def get_public_key(algo, private_key):
     privkey = private_key
     if type(private_key) != int:
         privkey = int.from_bytes(private_key, byteorder='big')
-    if algo == "MPC_ECDSA_SECP256K1" or algo == "MPC_CMP_ECDSA_SECP256K1":    
+    if algo == "MPC_ECDSA_SECP256K1" or algo == "MPC_CMP_ECDSA_SECP256K1":
         pubkey = secp256k1.G * privkey
         return pubkey.serialize()
     elif algo == "MPC_EDDSA_ED25519" or algo == "MPC_CMP_EDDSA_ED25519":
@@ -303,7 +303,7 @@ def encode_extended_key(algo, key, chain_code, is_pub):
         key = key.to_bytes(32, byteorder='big')
     elif type(key) == str:
         key = bytes.fromhex(key)
-    
+
     if is_pub:
         extended_key = pubkey_prefix[algo].to_bytes(4, byteorder='big') # prefix
     else:
