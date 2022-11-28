@@ -147,7 +147,7 @@ def get_recover_keys_args():
     questions = [
         inquirer.Text('backup', message='Enter the backup zip file name'),
         inquirer.Text('key', message='Enter the rsa private key file name'),
-        inquirer.Text('mobile_key', message=colored('Optional', attrs=['bold']) + 'Enter the mobile RSA private key file'),
+        inquirer.Text('mobile_key', message=colored('Optional', attrs=['bold']) + ' Enter the mobile RSA private key file or press enter'),
     ]
 
     return inquirer.prompt(questions)
@@ -156,25 +156,25 @@ def get_recover_keys_args():
 def recover_keys(show_xprv=False):
     args = get_recover_keys_args()
 
-    if not os.path.exists(args.backup):
-        print('Backupfile: {} not found.'.format(args.backup))
+    if not os.path.exists(args["backup"]):
+        print('Backupfile: {} not found.'.format(args["backup"]))
         exit(- 1)
-    if not os.path.exists(args.key):
-        print('RSA key: {} not found.'.format(args.key))
+    if not os.path.exists(args["key"]):
+        print('RSA key: {} not found.'.format(args["key"]))
         exit(-1)
 
     mobile_key_pass = None
     passphrase = None
 
-    if args.mobile_key is None:
+    if args["mobile_key"] is None:
         passphrase = getpass.getpass(prompt='Please enter mobile recovery passphrase:')
     else:
-        with open(args.mobile_key, 'r') as _key:
+        with open(args["mobile_key"], 'r') as _key:
             key_file = _key.readlines()
             if 'ENCRYPTED' in key_file[0] or 'ENCRYPTED' in key_file[1]:
                 mobile_key_pass = getpass.getpass(prompt='Please enter mobile recovery RSA private key passphrase:')
 
-    with open(args.key, 'r') as _key:
+    with open(args["key"], 'r') as _key:
         key_file = _key.readlines()
         if 'ENCRYPTED' in key_file[0] or 'ENCRYPTED' in key_file[1]:
             key_pass = getpass.getpass(prompt='Please enter recovery RSA private key passphrase:')
@@ -183,7 +183,7 @@ def recover_keys(show_xprv=False):
 
     try:
         privkeys = recover.restore_key_and_chaincode(
-            args.backup, args.key, passphrase, key_pass, args.mobile_key, mobile_key_pass)
+            args["backup"], args["key"], passphrase, key_pass, args["mobile_key"], mobile_key_pass)
     except recover.RecoveryErrorMobileKeyDecrypt:
         print(colored("Failed to decrypt mobile Key. " + colored("Please make sure you have the mobile passphrase entered correctly.", attrs = ["bold"]), "cyan"))
         exit(-1)
