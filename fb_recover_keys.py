@@ -73,7 +73,7 @@ def create_rsa_key_pair():
         print(colored('\nVerifying passphrase failed! Please try again', 'red'))
         return
 
-    print('\nThis mighr take a few seconds...')
+    print('\nThis might take a few seconds...')
 
     private_key = rsa.generate_private_key(
         public_exponent=PUBLIC_EXPONENT,
@@ -156,8 +156,7 @@ def get_recover_keys_args():
 
 def recover_keys(show_xprv=False):
     args = get_recover_keys_args()
-    print (type(args))
-    print (args)
+
     if not os.path.exists(args["backup"]):
         print('Backupfile: {} not found.'.format(args["backup"]))
         exit(- 1)
