@@ -139,6 +139,7 @@ def lagrange_coefficient(my_id, ids, field):
 # get private key, public key, and lagrange coefficient all 3 shards
 def extract_keys_from_shard(player_to_data, algo):
     result = defaultdict(dict)
+    print(player_to_data)
     if algo == "MPC_ECDSA_SECP256K1":
         for key, value in player_to_data.items():
             result[value]["coeff"] = lagrange_coefficient(key, player_to_data.keys(), secp256k1.q)
@@ -278,10 +279,14 @@ def compute_individual_shard(shard_path, identities, self_identity_type, metadat
     with open(metadata_path, 'r') as metadata_file:
         metadata_obj = json.loads(metadata_file.read())
         key_metadata_mapping = extract_metadata(metadata_obj)
+        for key in key_metadata_mapping:
+            algo = key_metadata_mapping[key][0]
+    
     if self_identity_type == "Mobile":
         with open(shard_path, 'r') as file:
             obj = json.loads(file.read())
             key_id = obj["keyId"]
+            this_id = get_player_id(key_id, obj["deviceId"], False)
         try:
             if (passphrase):
                 data = decrypt_mobile_private_key(passphrase.encode(), obj["userId"].encode(), bytes.fromhex(obj["encryptedKey"]))
@@ -316,8 +321,22 @@ def compute_individual_shard(shard_path, identities, self_identity_type, metadat
     else:
         cipher = extract_cipher_from_file(private_pem_path, key_pass)
         with open(shard_path, 'rb') as file:
+            cosigner_id, key_id = shard_path.split('_')
+            this_id = get_player_id(key_id, cosigner_id, True)
             decrypted_data = int.from_bytes(cipher.decrypt(file.read()), byteorder='big')
-    return decrypted_data
+
+    # get lagrange coefficient, private key, and public key for the given shard
+    shard_coefficient = lagrange_coefficient(this_id, identities.values(), secp256k1.q) # hardcoded for MPC_ECDSA_SECP256K1
+    private = (decrypted_data * shard_coefficient) % secp256k1.q
+    public = (secp256k1.G * private).serialize()
+
+    result_dict = defaultdict(dict)
+    result_dict[shard_path]["term"] = decrypted_data
+    result_dict[shard_path]["coeff"] = shard_coefficient
+    result_dict[shard_path]["private"] = private
+    result_dict[shard_path]["public"] = public
+
+    return result_dict
 
 def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=None, mobile_key_pem_path = None, mobile_key_pass = None):
     privkeys = {}
