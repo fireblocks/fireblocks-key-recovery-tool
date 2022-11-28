@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from email.policy import default
 import os
 from utils import recover
 import argparse
@@ -155,7 +156,8 @@ def get_recover_keys_args():
 
 def recover_keys(show_xprv=False):
     args = get_recover_keys_args()
-
+    print (type(args))
+    print (args)
     if not os.path.exists(args["backup"]):
         print('Backupfile: {} not found.'.format(args["backup"]))
         exit(- 1)
@@ -166,7 +168,7 @@ def recover_keys(show_xprv=False):
     mobile_key_pass = None
     passphrase = None
 
-    if args["mobile_key"] is None:
+    if args["mobile_key"] is '':
         passphrase = getpass.getpass(prompt='Please enter mobile recovery passphrase:')
     else:
         with open(args["mobile_key"], 'r') as _key:
