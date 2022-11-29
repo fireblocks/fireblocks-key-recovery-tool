@@ -13,6 +13,12 @@ CHANGE = 0
 ADDR_INDEX = 0
 RPC = "https://rpc.tzbeta.net/"
 
+ZERO_VALID_PASS = b'\x02'
+VALID_PASS = b'\x03'
+CURVE = b'ed'
+SIG_BYTES = b'sig'
+PUB_PREFIX_BYTES = b'\r\x0f%\xd9'
+
 
 def traceback(num_list):
     return b''.join(map(lambda num: num.to_bytes(1, 'big'), num_list))
@@ -29,7 +35,7 @@ base58_encodings = [
     (b"Co", 52, traceback([79, 199]), 32, u"context hash"),
 
     (b"tz1", 36, traceback([6, 161, 159]), 20, u"ed25519 public key hash"),
-    (b"tz2", 36, traceback([6, 161, 161]), 20, u"secp256k1 public key hash"),
+    (b"tz2", 36, traceback([6, 161, 161]    ), 20, u"secp256k1 public key hash"),
     (b"tz3", 36, traceback([6, 161, 164]), 20, u"p256 public key hash"),
     (b"KT1", 36, traceback([2, 90, 121]), 20, u"Originated address"),
 
@@ -100,7 +106,7 @@ def base58_decode(v: bytes) -> bytes:
 
 
 def get_xtz_pub_key(public_key: bytes) -> bytes:
-    return b58encode_check(b'\r\x0f%\xd9' + public_key)
+    return b58encode_check(PUB_PREFIX_BYTES + public_key)
 
 
 def get_xtz_address(xtz_pub_key: bytes, curve: bytes = b'ed') -> str:
@@ -139,20 +145,19 @@ def prepare_tx(derived_prv: str, derived_pub: bytes, xtz_amount: str, xtz_destin
     :return:
     """
     xtz_address = get_xtz_address(derived_pub)
-    pytezos - pytezos.using(shell=RPC, key=xtz_address)
-    transaction_opg = pytezos.transaction(destination=xtz_destination, amount=Decimal(xtz_amount))
+    pytz = pytezos.using(shell=RPC, key=xtz_address)
+    transaction_opg = pytz.transaction(destination=xtz_destination, amount=Decimal(xtz_amount))
     filled_transaction_opg = transaction_opg.autofill()
     # *** 1. Watermark message ***
     validation_pass = validation_passes[filled_transaction_opg.contents[0]['kind']]
     if any(map(lambda x: validation_passes[x['kind']] != validation_pass, filled_transaction_opg.contents)):
         raise ValueError('Mixed validation passes')
 
-    print(validation_pass, "is the validation pass")
     if validation_pass == 0:
         chain_watermark = bytes.fromhex(filled_transaction_opg.shell.chains.main.watermark())
-        watermark = b'\x02' + chain_watermark
+        watermark = ZERO_VALID_PASS + chain_watermark
     else:
-        watermark = b'\x03'
+        watermark = VALID_PASS
 
     watermarked_message = watermark + bytes.fromhex(filled_transaction_opg.forge())
     # *** 2. Scrub Input on message ***
