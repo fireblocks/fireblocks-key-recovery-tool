@@ -342,21 +342,21 @@ def extract_keys(term, shard_id, shard_identities, algo):
     if algo == "MPC_ECDSA_SECP256K1":
         coeff = lagrange_coefficient(shard_id, shard_identities.values(), secp256k1.q)
         private = (term * coeff) % secp256k1.q
-        public = secp256k1.G * private
+        public = (secp256k1.G * private).serialize()
     elif algo == "MPC_EDDSA_ED25519":
         coeff = lagrange_coefficient(shard_id, shard_identities.value(), ed25519.l)
         private = (term * coeff) % ed25519.l
         public = ed25519.scalarmult(ed25519.B, private)
     elif algo == "MPC_CMP_ECDSA_SECP256K1":
         private = term % secp256k1.q
-        public = secp256k1.G * private
+        public = (secp256k1.G * private).serialize()
     elif algo == "MPC_CMP_EDDSA_ED25519":    
         private = term % ed25519.l
         public = ed25519.scalarmult(ed25519.B, private)
     else:
         raise RecoveryErrorUnknownAlgorithm(algo)
     
-    return coeff, private, public.serialize()
+    return coeff, private, public
 
 # Combine keys of all 3 shards and validate that the calculated public key matches the provided public key
 def combine_and_validate(shards, metadata_path):
