@@ -325,9 +325,7 @@ def compute_individual_shard(shard_path, identities, self_identity_type, metadat
             decrypted_data = int.from_bytes(cipher.decrypt(file.read()), byteorder='big')
 
     # get lagrange coefficient, private key, and public key for the given shard
-    shard_coefficient = lagrange_coefficient(this_id, identities.values(), secp256k1.q) # hardcoded for MPC_ECDSA_SECP256K1
-    private = (decrypted_data * shard_coefficient) % secp256k1.q
-    public = (secp256k1.G * private).serialize()
+    (shard_coefficient, private, public) = extract_keys(decrypted_data, this_id, identities, algo)
 
     result_dict = defaultdict(dict)
     result_dict["path"] = shard_path
@@ -338,19 +336,54 @@ def compute_individual_shard(shard_path, identities, self_identity_type, metadat
 
     return result_dict
 
-def validate_outputs(shards, metadata_path):
-    xpriv = 0
-    for shard in shards:
-        xpriv = (xpriv + shard["term"] * shard["coeff"]) % secp256k1.q # currently hardcoded for MPC_ECDSA_SECP256K1
+# Extract the lagrange coefficient (if necessary), private, and public key for an individual shard
+def extract_keys(term, shard_id, shard_identities, algo):
+    coeff = None
+    if algo == "MPC_ECDSA_SECP256K1":
+        coeff = lagrange_coefficient(shard_id, shard_identities.values(), secp256k1.q)
+        private = (term * coeff) % secp256k1.q
+        public = (secp256k1.G * private).serialize()
+    elif algo == "MPC_EDDSA_ED25519":
+        coeff = lagrange_coefficient(shard_id, shard_identities.value(), ed25519.l)
+        private = (term * coeff) % ed25519.l
+        public = ed25519.scalarmult(ed25519.B, private)
+    elif algo == "MPC_CMP_ECDSA_SECP256K1":
+        private = term % secp256k1.q
+        public = (secp256k1.G * private).serialize()
+    elif algo == "MPC_CMP_EDDSA_ED25519":    
+        private = term % ed25519.l
+        public = ed25519.scalarmult(ed25519.B, private)
+    else:
+        raise RecoveryErrorUnknownAlgorithm(algo)
+    
+    return coeff, private, public
 
-    xpub = (secp256k1.G * xpriv).serialize()
-
+# Combine keys of all 3 shards and validate that the calculated public key matches the provided public key
+def combine_and_validate(shards, metadata_path):
     with open(metadata_path, "r") as file:
         obj = json.loads(file.read())
         key_metadata_mapping = extract_metadata(obj)
         for key in key_metadata_mapping:
+            algo = key_metadata_mapping[key][0]
             pub_from_metadata = key_metadata_mapping[key][1]
-
+        
+    xpriv = 0
+    for shard in shards:
+        if algo == "MPC_ECDSA_SECP256K1":
+            xpriv = (xpriv + shard["term"] * shard["coeff"]) % secp256k1.q
+            xpub = (secp256k1.G * xpriv).serialize()
+        elif algo == "MPC_EDDSA_ED25519":
+            xpriv = (xpriv + shard["term"] * shard["coeff"]) % ed25519.l
+            xpub = _ed25519_point_serialize(ed25519.scalarmult(ed25519.B, xpriv))
+        elif algo == "MPC_CMP_ECDSA_SECP256K1":
+            xpriv = (xpriv + shard["term"]) % secp256k1.q
+            xpub = (secp256k1.G * xpriv).serialize()
+        elif algo == "MPC_CMP_EDDSA_ED25519":    
+            xpriv = (xpriv + shard["term"]) % ed25519.l
+            xpub = _ed25519_point_serialize(ed25519.scalarmult(ed25519.B, xpriv))
+        else:
+            raise RecoveryErrorUnknownAlgorithm(algo)
+    
     if (pub_from_metadata != xpub):
         print(f"Failed to recover key, expected public key is: {pub_from_metadata} calculated public key is: {xpub}")
     else:

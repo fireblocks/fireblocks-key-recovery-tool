@@ -17,4 +17,4 @@ if __name__ == '__main__':
     outputs.append(recover.compute_individual_shard("3429798433_067681f4-3ae7-eda5-9ab7-4a3cc96c110a",id_data,"Cloud","metadata.json","priv.pem"))
     outputs.append(recover.compute_individual_shard("923242535_067681f4-3ae7-eda5-9ab7-4a3cc96c110a",id_data,"Cloud","metadata.json", "priv.pem"))
    
-    recover.validate_outputs(outputs, "metadata.json")
+    recover.combine_and_validate(outputs, "metadata.json")
