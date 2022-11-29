@@ -139,7 +139,6 @@ def lagrange_coefficient(my_id, ids, field):
 # get private key, public key, and lagrange coefficient all 3 shards
 def extract_keys_from_shard(player_to_data, algo):
     result = defaultdict(dict)
-    print(player_to_data)
     if algo == "MPC_ECDSA_SECP256K1":
         for key, value in player_to_data.items():
             result[value]["coeff"] = lagrange_coefficient(key, player_to_data.keys(), secp256k1.q)
@@ -172,7 +171,6 @@ def extract_keys_from_shard(player_to_data, algo):
 # combine keys of all shards
 def calculate_keys(key_id, player_to_data, algo):
     shard_keys = extract_keys_from_shard(player_to_data, algo)
-    print(shard_keys)
     if algo == "MPC_ECDSA_SECP256K1":
         privkey = 0
         for key, value in shard_keys.items():
