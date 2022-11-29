@@ -172,6 +172,7 @@ def extract_keys_from_shard(player_to_data, algo):
 # combine keys of all shards
 def calculate_keys(key_id, player_to_data, algo):
     shard_keys = extract_keys_from_shard(player_to_data, algo)
+    print(shard_keys)
     if algo == "MPC_ECDSA_SECP256K1":
         privkey = 0
         for key, value in shard_keys.items():
@@ -331,12 +332,32 @@ def compute_individual_shard(shard_path, identities, self_identity_type, metadat
     public = (secp256k1.G * private).serialize()
 
     result_dict = defaultdict(dict)
-    result_dict[shard_path]["term"] = decrypted_data
-    result_dict[shard_path]["coeff"] = shard_coefficient
-    result_dict[shard_path]["private"] = private
-    result_dict[shard_path]["public"] = public
+    result_dict["path"] = shard_path
+    result_dict["term"] = decrypted_data
+    result_dict["coeff"] = shard_coefficient
+    result_dict["private"] = private
+    result_dict["public"] = public
 
     return result_dict
+
+def validate_outputs(shards, metadata_path):
+    xpriv = 0
+    for shard in shards:
+        xpriv = (xpriv + shard["term"] * shard["coeff"]) % secp256k1.q # currently hardcoded for MPC_ECDSA_SECP256K1
+
+    xpub = (secp256k1.G * xpriv).serialize()
+
+    with open(metadata_path, "r") as file:
+        obj = json.loads(file.read())
+        key_metadata_mapping = extract_metadata(obj)
+        for key in key_metadata_mapping:
+            pub_from_metadata = key_metadata_mapping[key][1]
+
+    if (pub_from_metadata != xpub):
+        print(f"Failed to recover key, expected public key is: {pub_from_metadata} calculated public key is: {xpub}")
+    else:
+        print("Recovery OK")
+    
 
 def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=None, mobile_key_pem_path = None, mobile_key_pass = None):
     privkeys = {}
