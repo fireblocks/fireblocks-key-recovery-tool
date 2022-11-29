@@ -45,10 +45,8 @@ def withdraw_token(priv, transfer_params: TransferCheckedParams) -> RPCResponse:
     txn = Transaction().add(transfer_checked(transfer_params))
     txn.recent_blockhash = blockhash
     txn.fee_payer = transfer_params.owner
-    txn.instructions[0].keys[1].is_writable = True
-    signature = eddsa_sign.eddsa_sign(priv, txn.serialize_message())
-    final_sig = Signature(signature)
-    txn.add_signature(transfer_params.owner, final_sig)
+    signature = Signature(eddsa_sign.eddsa_sign(priv, txn.serialize_message()))
+    txn.add_signature(transfer_params.owner, signature)
     encoded_serialized_txn = txn.serialize()
     response = solana_client.send_raw_transaction(encoded_serialized_txn)
     print(f'Response is: {response}')
@@ -118,13 +116,13 @@ def withdraw_token_from_account(xpriv: str, account: int, token_account_address:
     """
     path = f'{BIP_44_CONSTANT}/{SOL_ASSET_NUM}/{account}/{CHANGE}/{ADDR_INDEX}'
     priv, pub = eddsa_sign.eddsa_derive(xpriv, path)
-    true_amount = int(amount * (10 ** decimals))
+    scaled_amount = int(amount * (10 ** decimals))
     params = TransferCheckedParams(
         program_id=TOKEN_PROGRAM_ID,
         source=PublicKey(token_account_address),
         dest=PublicKey(to_address),
         owner=PublicKey(pub),
-        amount=true_amount,
+        amount=scaled_amount,
         mint=PublicKey(token_address),
         decimals=decimals
     )
