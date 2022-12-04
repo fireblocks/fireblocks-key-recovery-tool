@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 import uuid
 import struct
 from collections import defaultdict
@@ -320,7 +321,9 @@ def compute_individual_shard(shard_path, identities, self_identity_type, metadat
     else:
         cipher = extract_cipher_from_file(private_pem_path, key_pass)
         with open(shard_path, 'rb') as file:
-            cosigner_id, key_id = shard_path.split('_')
+            shard_name = os.path.basename(shard_path)
+            cosigner_id, key_id = shard_name.split('_')
+
             this_id = get_player_id(key_id, cosigner_id, True)
             decrypted_data = int.from_bytes(cipher.decrypt(file.read()), byteorder='big')
 
