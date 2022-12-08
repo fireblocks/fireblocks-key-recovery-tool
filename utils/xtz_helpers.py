@@ -144,7 +144,7 @@ def prepare_tx(derived_prv: str, derived_pub: bytes, xtz_amount: str, xtz_destin
     :param xtz_destination:
     :return:
     """
-    xtz_address = get_xtz_address(derived_pub)
+    xtz_address = get_xtz_address(get_xtz_pub(derived_pub))
     pytz = pytezos.using(shell=RPC, key=xtz_address)
     transaction_opg = pytz.transaction(destination=xtz_destination, amount=Decimal(xtz_amount))
     filled_transaction_opg = transaction_opg.autofill()
