@@ -1,4 +1,5 @@
 import pysodium
+import requests
 import eddsa_sign
 from decimal import Decimal
 from pytezos import pytezos
@@ -12,12 +13,14 @@ XTZ_ASSET_NUM = 1729
 CHANGE = 0
 ADDR_INDEX = 0
 RPC = "https://rpc.tzbeta.net/"
+EXPLORER = "https://api.tzstats.com/explorer/account/"
 
 ZERO_VALID_PASS = b'\x02'
 VALID_PASS = b'\x03'
 CURVE = b'ed'
 SIG_BYTES = b'sig'
 PUB_PREFIX_BYTES = b'\r\x0f%\xd9'
+REVEALED = "is_revealed"
 
 
 def traceback(num_list):
@@ -137,16 +140,25 @@ def scrub_input(v) -> bytes:
 
 def prepare_tx(derived_prv: str, derived_pub: bytes, xtz_amount: str, xtz_destination: str) -> OperationGroup:
     """
-
     :param derived_prv:
     :param derived_pub:
     :param xtz_amount:
     :param xtz_destination:
     :return:
     """
-    xtz_address = get_xtz_address(get_xtz_pub(derived_pub))
-    pytz = pytezos.using(shell=RPC, key=xtz_address)
-    transaction_opg = pytz.transaction(destination=xtz_destination, amount=Decimal(xtz_amount))
+    public_key = get_xtz_pub_key(derived_pub)
+    xtz_address = get_xtz_address(public_key)
+    pytz = pytezos.using(shell=RPC, key=public_key.decode())
+    transaction_opg = pytz.operation_group()
+    # Check if Key is revealed
+    try:
+        key_revealed = requests.get(EXPLORER + xtz_address).json()[REVEALED]
+    except KeyError:
+        raise ValueError("Account has no records. Please verify this account is active and has funds.")
+    if not key_revealed:
+        print("Key is not revealed.\nAdding key reveal operation ...")
+        transaction_opg = transaction_opg.reveal()
+    transaction_opg = transaction_opg.transaction(destination=xtz_destination, amount=Decimal(xtz_amount))
     filled_transaction_opg = transaction_opg.autofill()
     # *** 1. Watermark message ***
     validation_pass = validation_passes[filled_transaction_opg.contents[0]['kind']]
@@ -181,3 +193,4 @@ def withdraw_funds(fprv: str, account_id: str, amount: str, destination: str):
     prv, pub = eddsa_sign.eddsa_derive(fprv, path)
     transaction = prepare_tx(prv, pub, amount, destination)
     return transaction.inject()
+
