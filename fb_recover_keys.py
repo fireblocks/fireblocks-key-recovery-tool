@@ -167,7 +167,7 @@ def recover_keys(show_xprv=False):
     mobile_key_pass = None
     passphrase = None
 
-    if args["mobile_key"] is '':
+    if args["mobile_key"] == '':
         passphrase = getpass.getpass(prompt='Please enter mobile recovery passphrase:')
     else:
         with open(args["mobile_key"], 'r') as _key:
@@ -227,7 +227,7 @@ def pop_main_menu():
 
 def main():
 
-    print(colored("\nWelcome to the Fireblocks backup and recovery tool.\n", "cyan"))
+    print(colored("\nWelcome to the Fireblocks backup and recovery tool", "cyan"))
     cont = True
 
     while cont:
