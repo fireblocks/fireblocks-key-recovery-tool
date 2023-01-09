@@ -1,4 +1,4 @@
-FROM python:3.7.9-slim-buster
+FROM python:3.10.9-slim-buster
 
 COPY requirements.txt /opt/
 
