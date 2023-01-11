@@ -13,3 +13,4 @@ qrcode==7.3.1
 Pillow==9.2.0
 inquirer==2.9.0
 cryptography==38.0.4
+animation==0.0.7
