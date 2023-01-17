@@ -13,6 +13,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from utils.public_key_verification import create_short_checksum
 from utils.public_key_verification import create_and_pop_qr
+import animation
 
 CREATE_RECOVERY_KEY_PAIR = 'CREATE_RECOVERY_KEY_PAIR'
 VERIFY_PUBLIC_KEY = 'VERIFY_PUBLIC_KEY'
@@ -73,12 +74,15 @@ def create_rsa_key_pair():
         print(colored('\nVerifying passphrase failed! Please try again', 'red'))
         return
 
-    print('\nThis might take a few seconds...')
+    wait = animation.Wait('spinner', colored('\nGenerating keys...', 'yellow'))
+    wait.start()
 
     private_key = rsa.generate_private_key(
         public_exponent=PUBLIC_EXPONENT,
         key_size=KEY_SIZE
     )
+
+    wait.stop()
 
     encrypted_pem_private_key = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
@@ -116,10 +120,10 @@ def pop_validate_pub_key_menu():
 
 
 def verify_public_key():
-    print(colored('Verfying public key for backup and recovery', 'cyan'))
+    print(colored('Verfying public key for backup and recovery\n', 'cyan'))
 
     file_path = inquirer.text(
-        message="Enter your public key file name or press enter for default", default=DEFAULT_KEY_FILE_PREFIX+'-pub.pem')
+        message="Enter your public key file name or press enter for default", default=DEFAULT_KEY_FILE_PREFIX + '-pub.pem')
 
     if not os.path.exists(file_path):
         print(colored('Public key file: {} not found.'.format(file_path), "red", attrs=['bold']))
@@ -136,7 +140,7 @@ def verify_public_key():
             print(colored(
                 "Opened the qr file for you and saved it on you machine as pub_key_qr.png", "cyan"))
         elif menu_options == public_key_verification_menu_options[SHORT_PHRASE_VERIFICATION]:
-            print("The short phrase is: " + colored(create_short_checksum(pub_key), attrs=['bold']))
+            print(colored("The short phrase is: " + colored(create_short_checksum(pub_key), attrs=['bold']), "cyan"))
         elif menu_options == public_key_verification_menu_options[EXIT_MENU]:
             cont=False
         else:
@@ -147,7 +151,7 @@ def verify_public_key():
 def get_recover_keys_args():
     questions = [
         inquirer.Text('backup', message='Enter the backup zip file name'),
-        inquirer.Text('key', message='Enter the rsa private key file name'),
+        inquirer.Text('key', message='Enter the rsa private key file name or press enter for default', default=DEFAULT_KEY_FILE_PREFIX + '-prv.pem'),
         inquirer.Text('mobile_key', message=colored('Optional', attrs=['bold']) + ' Enter the mobile RSA private key file or press enter'),
     ]
 
@@ -168,17 +172,17 @@ def recover_keys(show_xprv=False):
     passphrase = None
 
     if args["mobile_key"] == '':
-        passphrase = getpass.getpass(prompt='Please enter mobile recovery passphrase:')
+        passphrase = inquirer.password(message='Please enter the mobile recovery passphrase')
     else:
         with open(args["mobile_key"], 'r') as _key:
             key_file = _key.readlines()
             if 'ENCRYPTED' in key_file[0] or 'ENCRYPTED' in key_file[1]:
-                mobile_key_pass = getpass.getpass(prompt='Please enter mobile recovery RSA private key passphrase:')
+                mobile_key_pass = inquirer.password(message='Please enter mobile recovery RSA private key passphrase')
 
     with open(args["key"], 'r') as _key:
         key_file = _key.readlines()
         if 'ENCRYPTED' in key_file[0] or 'ENCRYPTED' in key_file[1]:
-            key_pass = getpass.getpass(prompt='Please enter recovery RSA private key passphrase:')
+            key_pass = inquirer.password(message='Please enter recovery RSA private key passphrase')
         else:
             key_pass = None
 
@@ -198,6 +202,7 @@ def recover_keys(show_xprv=False):
         print(colored("Failed to decrypt mobile Key. " + colored("Please make sure you have the mobile private key entered correctly.", attrs = ["bold"]), "cyan"))
         exit(-1)
 
+    print("\n")
     for algo, info in privkeys.items():
         # info may be either None or tuple
         if info:
@@ -208,17 +213,17 @@ def recover_keys(show_xprv=False):
             print(pubkey_descriptions[algo] + ":\t%s\t%s" % (recover.encode_extended_key(algo, pub, chaincode, True), colored("Verified!","green")))
         else:
             print(pubkey_descriptions[algo] + ":\t%s" % (colored("Verification failed","red")))
+    print("\n")
 
 
 def reveal_backup_private_key():
     show_prv = inquirer.confirm(colored(
-        colored('Warning', attrs=['bold']) + ' This will reveal your private key. Make sure no one else can see your screen. Continue?', 'yellow'), default=False)
+        colored('Warning', attrs=['bold']) + ' This will reveal your private key. Make sure no one else can see your screen.\nContinue?', 'yellow'), default=False)
     if show_prv:
         recover_keys(True)
 
 
 def pop_main_menu():
-    print('\n')
     return inquirer.list_input(message=colored(
         "What do you want to do?", "green"),
         choices=menu_options.values(),
@@ -227,7 +232,7 @@ def pop_main_menu():
 
 def main():
 
-    print(colored("\nWelcome to the Fireblocks backup and recovery tool", "cyan"))
+    print(colored("\nWelcome to the Fireblocks backup and recovery tool\n", "cyan"))
     cont = True
 
     while cont:
