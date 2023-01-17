@@ -1,9 +1,9 @@
 pytest==6.2.5
 pycryptodome==3.11.0
 termcolor==1.1.0
-substrate-interface==1.1.4
+substrate-interface==1.1.7
 py-algorand-sdk==1.8.0
-solana==0.19.1
+solana==0.25.0
 stellar_base==1.1.2.0
 gql==3.4.0
 cbor2==5.4.3
@@ -14,3 +14,5 @@ Pillow==9.2.0
 inquirer==2.9.0
 cryptography==38.0.4
 animation==0.0.7
+base58==2.1.1
+pytezos==3.7.1
