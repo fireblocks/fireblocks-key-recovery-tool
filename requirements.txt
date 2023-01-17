@@ -10,7 +10,7 @@ cbor2==5.4.3
 bech32==1.2.0
 crypto==1.4.1
 qrcode==7.3.1
-Pillow==9.2.0
+Pillow==9.3.0
 inquirer==2.9.0
 cryptography==38.0.4
 animation==0.0.7
