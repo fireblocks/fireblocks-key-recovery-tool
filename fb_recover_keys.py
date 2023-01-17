@@ -48,7 +48,7 @@ privkey_descriptions = {
 
 menu_options = {
     CREATE_RECOVERY_KEY_PAIR: '1. Create a recovery key pair',
-    VERIFY_PUBLIC_KEY: '2. Verify the public backup key',
+    VERIFY_PUBLIC_KEY: '2. Verify the public backup key (for self-service backups)',
     VERIFY_RECOVERY_PACKAGE: '3. Verify the recovery package',
     REVEAL_PRV_BACKUP_KEY: '4. Reveal the private backup key',
     EXIT_MENU: '5. Exit menu'
