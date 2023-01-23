@@ -10,3 +10,9 @@ cbor2==5.4.3
 bech32==1.2.0
 base58==2.1.1
 pytezos==3.7.1
+requests~=2.28.1
+solders~=0.2.0
+crc16~=0.1.1
+pysodium~=0.7.12
+pyblake2~=1.1.2
+blockfrost-python~=0.5.2
