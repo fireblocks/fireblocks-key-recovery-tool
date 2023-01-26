@@ -16,3 +16,4 @@ crc16~=0.1.1
 pysodium~=0.7.12
 pyblake2~=1.1.2
 blockfrost-python~=0.5.2
+requests-toolbelt~=0.10.1
