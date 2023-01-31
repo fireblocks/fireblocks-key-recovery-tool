@@ -10,3 +10,5 @@ cbor2==5.4.3
 bech32==1.2.0
 base58==2.1.1
 pytezos==3.7.1
+certifi>=2022.12.7 # not directly required, pinned by Snyk to avoid a vulnerability
+numpy>=1.22.2 # not directly required, pinned by Snyk to avoid a vulnerability
