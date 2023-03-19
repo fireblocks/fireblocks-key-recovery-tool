@@ -27,9 +27,9 @@ def withdraw(priv, pub, to_address, amount, asset_id: int, decimals: int):
 
     note = None  # optional note e.g. note = "TXID".encode()
     if asset_id:
-        unsigned_txn = AssetTransferTxn(from_address, params, to_address, int(amount * 1e6), asset_id, None, note)
+        unsigned_txn = AssetTransferTxn(from_address, params, to_address, int(amount * decimals), asset_id, None, note)
     else:
-        unsigned_txn = PaymentTxn(from_address, params, to_address, int(amount * decimals), None, note)
+        unsigned_txn = PaymentTxn(from_address, params, to_address, int(amount * 1e6), None, note)
 
     txn = encoding.msgpack_encode(unsigned_txn)
     to_sign = constants.txid_prefix + base64.b64decode(txn)
