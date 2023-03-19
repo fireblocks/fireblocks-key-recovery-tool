@@ -65,7 +65,7 @@ def withdraw_from_account(fprv: str, account: int, to_address: str, amount: floa
     :param fprv: Your extracted FPRV.
     :param account: Your vault Id.
     :param to_address: Assets receiver.
-    :param amount: Amount of assets to send. Int for tokens.
+    :param amount: Amount of assets to send.
     :param asset_id: (Optional) Your asset Id. For example, 31566704 for USDC.
     :param decimals: (Optional) Decimals of your asset. For example, 1e6 for USDC.
     :return:
