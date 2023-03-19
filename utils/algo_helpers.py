@@ -36,11 +36,11 @@ def withdraw(priv, pub, to_address, amount, asset_id: int, decimals: int):
     sig = eddsa_sign.eddsa_sign(priv, to_sign)
     sig = base64.b64encode(sig).decode()
     signed_txn = SignedTransaction(unsigned_txn, sig)
-    txid = algod_client.send_transaction(signed_txn)
+    tx_id = algod_client.send_transaction(signed_txn)
 
-    print("Sent transaction with txID: {}".format(txid))
+    print("Sent transaction with txID: {}".format(tx_id))
 
-    return txid
+    return tx_id
 
 
 def get_balance(addr):
