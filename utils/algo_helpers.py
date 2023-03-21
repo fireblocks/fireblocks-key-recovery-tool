@@ -3,7 +3,7 @@ from algosdk import encoding
 from algosdk import constants
 from algosdk.future.transaction import PaymentTxn, SignedTransaction, AssetTransferTxn
 import base64
-import eddsa_sign
+from utils import eddsa_sign
 
 BIP_44_CONSTANT = 44
 ALGO_ASSET_NUM = 283
