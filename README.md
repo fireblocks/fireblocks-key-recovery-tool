@@ -36,7 +36,7 @@
 For a sanity test, run:
 * ./fb_recover_keys.py `<backup zip file> <RSA recovery private key>`
 
-Do not run the below for production (mainnet) workspaces, unless for actual disaster scenarios. 
+#### **<span style="color:red">Do not run the below for production (mainnet) workspaces, unless for actual disaster scenarios. </span>**
 
 For a full recovery, run:
 * ./fb_recover_keys.py `<backup zip file> <RSA recovery private key>` --prv
