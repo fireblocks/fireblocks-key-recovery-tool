@@ -29,7 +29,7 @@
 ### Build the utility locally
 * install python 3
 * install pip 3
-* apt install libsodium-dev libsecp256k1-dev
+* apt install libsodium-dev libsecp256k1-dev libgmp-dev
 * run: pip3 install -r requirements.txt
 
 ### Run the utility locally
