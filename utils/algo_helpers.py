@@ -27,7 +27,7 @@ def withdraw(priv, pub, to_address, amount, asset_id: int, decimals: int):
 
     note = None  # optional note e.g. note = "TXID".encode()
     if asset_id:
-        unsigned_txn = AssetTransferTxn(from_address, params, to_address, int(amount * decimals), asset_id, None, note)
+        unsigned_txn = AssetTransferTxn(from_address, params, to_address, int(amount * (10**decimals)), asset_id, None, note)
     else:
         unsigned_txn = PaymentTxn(from_address, params, to_address, int(amount * 1e6), None, note)
 
@@ -60,14 +60,14 @@ def xpub_to_address(xpub: str, account: int) -> str:
 
 
 def withdraw_from_account(fprv: str, account: int, to_address: str, amount: float, asset_id: int = 0,
-                          decimals: int = 1e6) -> str:
+                          decimals: int = 6) -> str:
     """
     :param fprv: Your extracted FPRV.
     :param account: Your vault Id.
     :param to_address: Assets receiver.
     :param amount: Amount of assets to send.
     :param asset_id: (Optional) Your asset Id. For example, 31566704 for USDC.
-    :param decimals: (Optional) Decimals of your asset. For example, 1e6 for USDC.
+    :param decimals: (Optional) Decimals of your asset. For example, 6 for USDC.
     :return:
     """
     path = f'{BIP_44_CONSTANT}/{ALGO_ASSET_NUM}/{account}/{CHANGE}/{ADDR_INDEX}'
