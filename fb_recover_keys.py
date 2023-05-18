@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-## This is a legacy script. Please use fb_recovery_tool.py instead.
-
 import os
 from utils import recover
 import argparse
