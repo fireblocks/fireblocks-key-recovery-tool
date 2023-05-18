@@ -47,5 +47,5 @@
       private key file, the passphrase to that private key file, and the owner’s passphrase.
 
   2. Use the Legacy script:
-    Unlike with the recommended method above, with this method you need to prepare the recovery private key in advance.
+     Unlike with the recommended method above, with this method you need to prepare the recovery private key in advance.
     * run `./fb_recover_keys.py <backup zip file> <RSA recovery private key>` --prv
