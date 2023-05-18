@@ -7,10 +7,8 @@
 * cd fireblocks-key-recovery-tool
 
 ### Prerequisites
-
-* Backup file `<backup.zip>`
-* Private key `<key.pem>`
-* Passphrase
+* Follow the steps to [create a Workspace Keys Backup file](https://support.fireblocks.io/hc/en-us/articles/360012223159-Workspace-Keys-Backup-and-Recovery-Hard-Key-Recovery-)
+* Your Owner must have their Owner recovery passphrase
 
 ## Running in Docker
 
@@ -30,22 +28,21 @@
 * run: pip3 install -r requirements.txt
 
 ### Run the utility locally
-* See below for instructions on how to run the recovery tool
+* See below for instructions on how to run the recovery tool for a full recovery.
 
-1. Recommended: 
-    * run `./fireblocks_key_backup_and_recovery.py`
+  1. Recommended: 
+      * run `./fireblocks_key_backup_and_recovery.py`
 
-   #### It opens a menu with the following options:
-   1. Create a recovery key pair - generate a recovery key-pair. You'll be asked to choose a 
-      passphrase that will be used to encrypt the private key, make sure you remember it
-   2. Verify the public backup key - verify the public key file of the recovery key-pair. This is useful 
-      for users with the self-serve backups that want to validate that their workspace owner’s request to 
-      back up the keys matches the key pair at their premise. Requires: the recovery key-pair public key
-   3. Verify the recovery package - run a sanity test of the workspace key backup package. Requires: the 
-      backup package, the recovery key pair private file, the passphrase to that private file, and the 
-      owner’s passphrase
-   4. Reveal the private backup key - Requires: the backup package, the recovery key pair private file, 
-      the passphrase to that private file, and the owner’s passphrase
+      #### It opens a menu with the following options:
+      1. Create a recovery key pair - generate a recovery key-pair. You will be required to
+         create a key pair passphrase to encrypt the private key file from the key pair.
+      2. Verify the public backup key - verify the public key file of the recovery key-pair. 
+         This is useful for users with Self-Serve backups who want to validate that their workspace Owner’s request to back up the keys matches the key pair at their premise. Requires the recovery key-pair public key.
+      3. Verify the recovery package - run a sanity test of the workspace key backup package. Requires: the 
+         backup package, the recovery key pair private file, the passphrase to that private file, and the 
+         owner’s passphrase
+      4. Reveal the private backup key - Requires: the backup package, the recovery key pair private file, 
+         the passphrase to that private file, and the owner’s passphrase
 
-2. Use the Legacy script:
-   * run `./fb_recover_keys.py <backup zip file> <RSA recovery private key>` --prv
+  2. Use the Legacy script:
+    * run `./fb_recover_keys.py <backup zip file> <RSA recovery private key>` --prv

@@ -169,7 +169,7 @@ def recover_keys(show_xprv=False):
 
     mobile_key_pass = None
     passphrase = None
-
+    
     if args["mobile_key"] == '':
         passphrase = inquirer.password(message='Please enter the mobile recovery passphrase')
     else:
