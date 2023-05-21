@@ -1,9 +1,9 @@
 # Fireblocks Key Backup and Recovery Tool
 
-The Fireblocks Backup and Recovery Tool simplifies completing four important backup and recovery actions for your Fireblocks workspace keys. 
-You should use this tool on a designated offline machine.
-Follow the steps to [create a Workspace Keys Backup file](https://support.fireblocks.io/hc/en-us/articles/360012223159-Workspace-Keys-Backup-and-Recovery-Hard-Key-Recovery-).
-Your Owner must have their Owner recovery passphrase.
+The Fireblocks Backup and Recovery Tool simplifies completing four important backup and recovery actions for your Fireblocks workspace keys.  
+You should use this tool on a designated offline machine.  
+Follow the steps to [create a Workspace Keys Backup file](https://support.fireblocks.io/hc/en-us/articles/360012223159-Workspace-Keys-Backup-and-Recovery-Hard-Key-Recovery-).  
+Your Owner must have their Owner recovery passphrase.  
 
 ## Installation
 
