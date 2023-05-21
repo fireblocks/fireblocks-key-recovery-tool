@@ -34,18 +34,18 @@ Your Owner must have their Owner recovery passphrase.
       * run `./fireblocks_key_backup_and_recovery.py`
 
       #### It opens a menu with the following options:
-      1. Create a recovery key pair - generate a recovery key-pair. You will be required to
+      1. **Create a recovery key pair** - generate a recovery key-pair. You will be required to
       create a key pair passphrase to encrypt the private key file from the key pair.
-      2. Verify the public backup key - verify the public key file of the recovery key-pair. 
+      2. **Verify the public backup key** - verify the public key file of the recovery key-pair. 
       This is useful for users with Self-Serve backups who want to validate that their workspace 
       Owner’s request to back up the keys matches the key pair at their premise. Requires the 
       recovery key-pair public key.
-      3. Verify the recovery package - run a sanity test of the workspace key backup package. 
+      3. **Verify the recovery package** - run a sanity test of the workspace key backup package. 
       Requires: the backup package, the recovery key pair private key file, the passphrase to that 
       private  key file, and the owner’s passphrase.
-      4. Reveal the private backup key - Requires: the backup package, the recovery key pair 
+      4. **Reveal the private backup key** - Requires: the backup package, the recovery key pair 
       private key file, the passphrase to that private key file, and the owner’s passphrase.
 
   2. Use the Legacy script:  `./fb_recover_keys.py`
-      * Unlike with the recommended method above, with this method you need to prepare the recovery private key in advance.  
+      * Unlike with the recommended method above, with this method you need to prepare the recovery private key and the backup zip file in advance.  
       * run `./fb_recover_keys.py <backup zip file> <RSA recovery private key>` --prv
