@@ -2,33 +2,33 @@
 
 The Fireblocks Backup and Recovery Tool simplifies completing four important backup and recovery actions for your Fireblocks workspace keys. 
 You should use this tool on a designated offline machine.
-Follow the steps to [create a Workspace Keys Backup file](https://support.fireblocks.io/hc/en-us/articles/360012223159-Workspace-Keys-Backup-and-Recovery-Hard-Key-Recovery-){:target="_blank"}
-Your Owner must have their Owner recovery passphrase
+Follow the steps to [create a Workspace Keys Backup file](https://support.fireblocks.io/hc/en-us/articles/360012223159-Workspace-Keys-Backup-and-Recovery-Hard-Key-Recovery-).
+Your Owner must have their Owner recovery passphrase.
 
 ## Installation
 
 * Please clone the repository:
   * `git clone https://github.com/fireblocks/fireblocks-key-recovery-tool.git`
 
-* cd fireblocks-key-recovery-tool
+* `cd fireblocks-key-recovery-tool`
 
 
 ## Running in Docker
 
 ### Build
-* docker build -t fb_recover_key .
+* `docker build -t fb_recover_key .`
 
 ### Run
 * cd to `<directory containing the backup file and the private key>`
-* Run: docker run -it -v "${PWD}:/opt/fb_recover_keys/backup" fb_recover_key:latest bash
+* Run: `docker run -it -v "${PWD}:/opt/fb_recover_keys/backup" fb_recover_key:latest bash`
 * See below for instructions on how to run the recovery tool.
 
 ## Running Locally
 
 ### Build
-* install python 3.9
-* install pip3
-* run: pip3 install -r requirements.txt
+* `install python 3.9`
+* `install pip3`
+* `pip3 install -r requirements.txt`
 
 ## Running the Fireblocks Key Backup and Recovery Tool
   1. Recommended: 
