@@ -16,7 +16,7 @@ You should use this tool on a designated offline machine.
 ## Running in Docker
 
 ### Build
-* docker build -t fb_recover_key
+* docker build -t fb_recover_key .
 
 ### Run
 * cd to `<directory containing the backup file and the private key>`
