@@ -15,7 +15,7 @@ def create_and_pop_qr(key):
     qr.make(fit=True)
 
     img = qr.make_image(fill='black', back_color='white')
-    img.save('key_qr.png')
+    img.save('pub_key_qr.png')
 
-    image_file = Image.open("key_qr.png")
+    image_file = Image.open("pub_key_qr.png")
     image_file.show()
