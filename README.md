@@ -1,7 +1,6 @@
 # Fireblocks Key Backup and Recovery Tool
 
-The Fireblocks Backup and Recovery Tool simplifies completing four important backup and recovery actions for your Fireblocks workspace keys.  
-You should use this tool on a designated offline machine.  
+The Fireblocks Backup and Recovery Tool simplifies completing four important backup and recovery actions for your Fireblocks workspace keys. You should use this tool on a designated offline machine.  
 Follow the steps to [create a Workspace Keys Backup file](https://support.fireblocks.io/hc/en-us/articles/360012223159-Workspace-Keys-Backup-and-Recovery-Hard-Key-Recovery-).  
 Your Owner must have their Owner recovery passphrase.  
 
@@ -48,5 +47,5 @@ Your Owner must have their Owner recovery passphrase.
       private key file, the passphrase to that private key file, and the owner’s passphrase.
 
   2. Use the Legacy script:  `./fb_recover_keys.py`
-     Unlike with the recommended method above, with this method you need to prepare the recovery private key in advance.
+     Unlike with the recommended method above, with this method you need to prepare the recovery private key in advance.  
     * run `./fb_recover_keys.py <backup zip file> <RSA recovery private key>` --prv
