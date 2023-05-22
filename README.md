@@ -48,4 +48,8 @@
 
   2. Use the Legacy script:  `./fb_recover_keys.py`
      Unlike with the recommended method above, with this method you need to prepare the recovery private key in advance.
-    * run `./fb_recover_keys.py <backup zip file> <RSA recovery private key>` --prv
+     For sanity tests:
+    * run `./fb_recover_keys.py <backup zip file> <RSA recovery private key>` 
+     
+     For Private key reconstruction - SHOULD NOT BE DONE ON PRODUCTION KITS UNLESS THERE IS A DISASTER SCENARIO:
+    * run  `./fb_recover_keys.py <backup zip file> <RSA recovery private key> --prv` 
