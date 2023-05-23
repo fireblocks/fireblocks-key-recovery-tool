@@ -137,7 +137,7 @@ def verify_public_key():
         if menu_options == public_key_verification_menu_options[QR_CODE_VERIFICATION]:
             create_and_pop_qr(pub_key)
             print(colored(
-                "Opened the qr file for you and saved it on you machine as pub_key_qr.png", "cyan"))
+                "Opened the QR image file for you (local run only), and saved it on your machine as pub_key_qr.png", "cyan"))
         elif menu_options == public_key_verification_menu_options[SHORT_PHRASE_VERIFICATION]:
             print(colored("The short phrase is: " + colored(create_short_checksum(pub_key), attrs=['bold']), "cyan"))
         elif menu_options == public_key_verification_menu_options[EXIT_MENU]:
