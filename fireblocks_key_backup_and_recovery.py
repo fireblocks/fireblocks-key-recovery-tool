@@ -73,6 +73,16 @@ def create_rsa_key_pair():
         print(colored('\nVerifying passphrase failed! Please try again', 'red'))
         return
 
+    key_prefix = inquirer.text(
+        message="Enter your key files names or press enter for default", default=DEFAULT_KEY_FILE_PREFIX)
+
+    public_key_file_name = key_prefix + '-pub.pem'
+    private_key_file_name = key_prefix + '-prv.pem'
+
+    if(os.path.exists(public_key_file_name) or os.path.exists(private_key_file_name)):
+        print(colored("\nPublic or private key files with this name already exists!. Can't override\n", "red", attrs=['bold']))
+        return
+
     wait = animation.Wait('spinner', colored('\nGenerating keys...', 'yellow'))
     wait.start()
 
@@ -96,18 +106,16 @@ def create_rsa_key_pair():
         format=serialization.PublicFormat.SubjectPublicKeyInfo
     )
 
-    key_prefix = inquirer.text(
-        message="Enter your public key file name or press enter for default", default=DEFAULT_KEY_FILE_PREFIX)
 
-    private_key_file = open(key_prefix + '-prv.pem', 'w')
+    private_key_file = open(private_key_file_name, 'w')
     private_key_file.write(encrypted_pem_private_key.decode())
     private_key_file.close()
 
-    public_key_file = open(key_prefix + '-pub.pem', 'w')
+    public_key_file = open(public_key_file_name, 'w')
     public_key_file.write(pem_public_key.decode())
     public_key_file.close()
 
-    print(colored('\nCreated files with prefix ' + key_prefix, "cyan"))
+    print(colored("\nCreated files: ${private_key_file_name} ", "cyan"))
 
 
 def pop_validate_pub_key_menu():
@@ -117,7 +125,13 @@ def pop_validate_pub_key_menu():
         choices=public_key_verification_menu_options.values(),
     )
 
-
+def is_pem_public_key(key_str):
+    try:
+        serialization.load_pem_public_key(key_str.encode())
+        return True
+    except (ValueError, TypeError, AttributeError):
+        return False
+    
 def verify_public_key():
     print(colored('Verfying public key for backup and recovery\n', 'cyan'))
 
@@ -125,11 +139,15 @@ def verify_public_key():
         message="Enter your public key file name or press enter for default", default=DEFAULT_KEY_FILE_PREFIX + '-pub.pem')
 
     if not os.path.exists(file_path):
-        print(colored('Public key file: {} not found.'.format(file_path), "red", attrs=['bold']))
-        exit(-1)
+        print(colored('\nPublic key file: {} not found.\n'.format(file_path), "red", attrs=['bold']))
+        return
 
     with open(file_path, 'r') as _pub_key:
         pub_key = _pub_key.read()
+    
+    if not is_pem_public_key(pub_key):
+        print(colored('\nPublic key file: {} is not a valid PEM public key.\n'.format(file_path), "red", attrs=['bold']))
+        return
 
     cont = True
     while cont:
