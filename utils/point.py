@@ -21,7 +21,7 @@ class Point:
 
     def __init__(self, x, y, curve=secp256k1):
     
-        """
+        r"""
         Initialize a point on an elliptic curve.
 
         The x and y parameters must satisfy the equation :math:`y^2 \equiv x^3 + ax + b \pmod{p}`,
@@ -139,7 +139,7 @@ class Point:
 
     def __mul__(self, scalar):
         
-        """
+        r"""
         Multiply a :class:`Point` on an elliptic curve by an integer.
 
         Args:
@@ -169,7 +169,7 @@ class Point:
 
     def __rmul__(self, scalar):
         
-        """
+        r"""
         Multiply a :class:`Point` on an elliptic curve by an integer.
 
         Args:
