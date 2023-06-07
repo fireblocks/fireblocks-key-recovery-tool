@@ -6,8 +6,9 @@ import uuid
 import struct
 from collections import defaultdict
 from .curve import secp256k1
-from .point import Point
+from .errors import RecoveryError, RecoveryErrorRSAKeyImport, RecoveryErrorMetadataNotFound
 from .helper import encode_base58_checksum
+from .metadata import parse_metadata_file
 from utils import ed25519
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
@@ -36,58 +37,37 @@ algorithm_enum_mapping = {
     'MPC_CMP_EDDSA_ED25519': 1,
 }
 
-class RecoveryError(Exception):
+
+class RecoveryErrorPublicKeyNoMatch(RecoveryError):
     pass
 
-class RecoveryErrorMetadataNotFound(Exception):
-    def __init__(self, zip_file_path):
-        self._zip_file_path = zip_file_path
 
-    def __str__(self):
-        return ("Backup zip %s doesn't contain metadata.json" % self._zip_file_path)
+class RecoveryErrorKeyIdNotInMetadata(RecoveryError):
+    def __init__(self, key_id: str):
+        super().__init__(f"Found key id {key_id} in zip file, but it doesn't exist in metadata.json")
 
-class RecoveryErrorPublicKeyNoMatch(Exception):
-    pass
 
-    # def __str__(self):
-    #     return "metadata.json public key doesn't match the calculated one (%s != %s)" % (self._metadata_public_key, self._pub)
+class RecoveryErrorKeyIdMissing(RecoveryError):
+    def __init__(self, key_id: str):
+        super().__init__(f"metadata.json contains key id {key_id}, which wasn't found in zip file")
 
-class RecoveryErrorKeyIdNotInMetadata(Exception):
-    def __init__(self, key_id):
-        self._key_id = key_id
 
-    def __str__(self):
-        return "ERROR: Found key id %s in zip file, but it doesn't exist in metadata.json" % (self._key_id)
-
-class RecoveryErrorKeyIdMissing(Exception):
-    def __init__(self, key_id):
-        self._key_id = key_id
-
-    def __str__(self):
-        return "ERROR: metadata.json contains key id %s, which wasn't found in zip file" % (self._key_id)
-
-class RecoveryErrorUnknownAlgorithm(Exception):
+class RecoveryErrorUnknownAlgorithm(RecoveryError):
     def __init__(self, algo):
-        self._algo = algo
+        super().__init__(f"metadata.json contains unsupported signature algorithm {algo}")
 
-    def __str__(self):
-        return "ERROR: metadata.json contains unsupported signature algorithm %s" % (self._algo)
 
-class RecoveryErrorUnknownChainCode(Exception):
-    def __str__(self):
-        return "ERROR: chain code is metadata.json is missing or invalid "
-
-class RecoveryErrorMobileKeyDecrypt(Exception):
+class RecoveryErrorMobileKeyDecrypt(RecoveryError):
     pass
 
-class RecoveryErrorRSAKeyImport(Exception):
+
+class RecoveryErrorMobileRSAKeyImport(RecoveryError):
     pass
 
-class RecoveryErrorMobileRSAKeyImport(Exception):
+
+class RecoveryErrorMobileRSADecrypt(RecoveryError):
     pass
 
-class RecoveryErrorMobileRSADecrypt(Exception):
-    pass
 
 def _unpad(text, k = 16):
     nl = len(text)
@@ -171,7 +151,7 @@ def calculate_keys(key_id, player_to_data, algo):
 def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=None, mobile_key_pem_path = None, mobile_key_pass = None):
     privkeys = {}
     players_data = defaultdict(dict)
-    key_metadata_mapping = {}
+    signing_keys = {}
 
     with open(private_pem_path, 'r') as _file:
         key_pem = _file.read()
@@ -184,34 +164,16 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
     with ZipFile(zip_path, 'r') as zipfile:
         if "metadata.json" not in zipfile.namelist():
             raise RecoveryErrorMetadataNotFound(zip_path)
+
         with zipfile.open("metadata.json") as file:
-            obj = json.loads(file.read())
-            default_chain_code = bytes.fromhex(obj["chainCode"])
-            if "keys" in obj:
-                keys_in_backup = obj["keys"]
-            else:
-                # backward compatibility: backup includes just one ECDSA key
-                keys_in_backup = {obj["keyId"]: {"publicKey": obj["publicKey"], "algo": "MPC_ECDSA_SECP256K1"}}
-            for key_id, key_metadata in keys_in_backup.items():
-                metadata_public_key = key_metadata["publicKey"]
-                algo = key_metadata["algo"]
-                # Some keys may have their own chaincode specified
-                # If a chaincode defintion exists for a specific key, use that.
-                # if not, use the "default" chaincode defined at the top of metadata.json
-                if "chainCode" in key_metadata:
-                    chain_code_for_this_key = bytes.fromhex(key_metadata["chainCode"])
-                else:
-                    chain_code_for_this_key = default_chain_code
-                if len(chain_code_for_this_key) != 32:
-                        raise RecoveryErrorUnknownChainCode()
-                key_metadata_mapping[key_id] = algo, metadata_public_key, chain_code_for_this_key
+            signing_keys = parse_metadata_file(file).signing_keys
 
         for name in zipfile.namelist():
             with zipfile.open(name) as file:
                 if name.startswith("MOBILE"):
                     obj = json.loads(file.read())
                     key_id = obj["keyId"]
-                    if key_id not in key_metadata_mapping:
+                    if key_id not in signing_keys:
                         raise RecoveryErrorKeyIdNotInMetadata(key_id)
                     try:
                         if (passphrase):
@@ -240,7 +202,7 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
 
                     if len(data) == 36: # the first 4 bytes encode the algorithm, and the rest is the private share
                         algo = int.from_bytes(data[:4], byteorder='little')
-                        if algorithm_enum_mapping[key_metadata_mapping[key_id][0]] != algo:
+                        if algorithm_enum_mapping[signing_keys[key_id].algorithm] != algo:
                             raise RecoveryErrorUnknownAlgorithm(algo)
                         data = data[4:]
                     players_data[key_id][get_player_id(key_id, obj["deviceId"], False)] = int.from_bytes(data, byteorder='big')
@@ -251,27 +213,27 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
                         cosigner_id, key_id = name.split('_')
                     else:
                         #backward compatibility: backup includes just one ECDSA key
-                        if len(key_metadata_mapping) == 1: # len > 1 means new format, so ignore old format files
+                        if len(signing_keys) == 1:  # len > 1 means new format, so ignore old format files
                             cosigner_id = name
-                            key_id = list(key_metadata_mapping.keys())[0]
+                            key_id = list(signing_keys.keys())[0]
                         else:
                             key_id = None
 
-                    if key_id:
+                    if key_id is not None and key_id in signing_keys:
                         data = cipher.decrypt(file.read())
                         players_data[key_id][get_player_id(key_id, cosigner_id, True)] = int.from_bytes(data, byteorder='big')
 
-    for key_id in key_metadata_mapping:
+    for key_id in signing_keys:
         if key_id not in players_data:
             raise RecoveryErrorKeyIdMissing(key_id)
 
     for key_id, key_players_data in players_data.items():
-        algo = key_metadata_mapping[key_id][0]
-        chain_code_for_this_key = key_metadata_mapping[key_id][2]
+        algo = signing_keys[key_id].algorithm
+        chain_code_for_this_key = signing_keys[key_id].chain_code
         privkey, pubkey_str = calculate_keys(key_id, key_players_data, algo)
 
-        pub_from_metadata = key_metadata_mapping[key_id][1]
-        if (pub_from_metadata != pubkey_str):
+        pub_from_metadata = signing_keys[key_id].public_key
+        if pub_from_metadata != pubkey_str:
             print(f"Failed to recover {algo} key, expected public key is: {pub_from_metadata} calculated public key is: {pubkey_str}")
             privkeys[algo] = None
         else:

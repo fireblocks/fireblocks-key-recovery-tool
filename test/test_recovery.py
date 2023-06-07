@@ -150,3 +150,19 @@ def test_recovery_with_mobile_share_as_json():
     assert(pub == "001d0a110282f7e440ca24abfd1fcc785c1325cf9e87a0e87a3d3db17f83dc6f49")
     assert(recover.encode_extended_key('MPC_EDDSA_ED25519', eddsa_priv_key, eddsa_chaincode, False) == "fprv4LsXPWzhTTp9bqsKptKiZ1A66q9rLXXFKorb3CeQBq4Wjd4xcJuWqBndhfkSrMeRaojHBsEv7HoHuGGn5uqWQ43MZFTfuYB6gQgGTdGggTm")
     assert(recover.encode_extended_key('MPC_EDDSA_ED25519', pub, eddsa_chaincode, True) == "fpub8sZZXw2wbqVpVJu7iXzJxQpCfrfnVri9u7TNKighc6rua7KjEhj71gQVsivkxG6tV5xNmXLrU3EpaRP8cJZhk9otAfzsZwJsjEqGCjmWEg8")
+
+
+def test_recovery_with_master_keys():
+    result = recover.restore_key_and_chaincode(TEST_DIR / "backup_with_master_key.zip", TEST_DIR / "priv_ncw.pem", "2#0Iw0Qov@&QP09p", key_pass="SECRET")
+    ecdsa_priv_key, ecdsa_chaincode = result["MPC_CMP_ECDSA_SECP256K1"]
+    eddsa_priv_key, eddsa_chaincode = result["MPC_EDDSA_ED25519"]
+
+    pub = recover.get_public_key("MPC_ECDSA_SECP256K1", ecdsa_priv_key)
+    assert pub == "033f5e4fb621e4cc777e5b9cdc0ef06c7b55042e9ce6c3bf013daab9fba29b37b8"
+    assert recover.encode_extended_key("MPC_ECDSA_SECP256K1", ecdsa_priv_key, ecdsa_chaincode, False) == "xprv9s21ZrQH143K2Hrbqf9FU48JZrgBSVyQiTiF4NVSeoRQ6gfNhKLC7qSewjGD67sDevao46VE3rdYEBuaN216a9SdgzC425MpMqoVLEB16TF"
+    assert recover.encode_extended_key("MPC_ECDSA_SECP256K1", pub, ecdsa_chaincode, True) == "xpub661MyMwAqRbcEmw4wggFqC537tWfqxhG5gdqrku4D8xNyUzXEreSfdm8o1BR6F6fKPDysmcLjrR1Q99AANhVHyk8VDkQNngdE3SYHekMGgJ"
+
+    pub = recover.get_public_key("MPC_EDDSA_ED25519", eddsa_priv_key)
+    assert pub == "00d9952a61b48099a1dec145c16de516551fef6ece2792041c9ccfd1bf8b71ce4b"
+    assert recover.encode_extended_key("MPC_EDDSA_ED25519", eddsa_priv_key, eddsa_chaincode, False) == "fprv4LsXPWzhTTp9aFbbfZmdvZWkeQCaRx7w9YrVkfHPCh1SBypVQ8XdYmGJbCXK5SepZuo9UGTjegUmgaPFunv8vn1TaEggMnaFPXbAmDqSkjZ"
+    assert recover.encode_extended_key("MPC_EDDSA_ED25519", pub, eddsa_chaincode, True) == "fpub8sZZXw2wbqVpTidPZDSEKyAsDRiWbHJqirTH3BKgcxoq2U5G2XMDjFtAmH9GJekgiEW9o6hYVn8TJvmk64FRYcJiWaZFmpLirqhEThcHu2s"
