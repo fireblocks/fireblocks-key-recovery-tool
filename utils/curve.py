@@ -2,7 +2,7 @@
 
 class Curve:
 
-    """
+    r"""
     Representation of an elliptic curve.
 
     Defines a group for  the arithmetic operations of point addition and scalar multiplication.
@@ -22,7 +22,7 @@ class Curve:
 
     def __init__(self, name, p, a, b, q, gx, gy, oid=None):
 
-        """
+        r"""
         Initialize the parameters of an elliptic curve.
 
         WARNING: Do not generate your own parameters unless you know what you are doing or you could
@@ -67,7 +67,7 @@ class Curve:
 
     def is_point_on_curve(self, P):
 
-        """
+        r"""
         Check if a point lies on this curve.
 
         The check is done by evaluating the curve equation :math:`y^2 \equiv x^3 + ax + b \pmod{p}`
@@ -89,7 +89,7 @@ class Curve:
 
     def evaluate(self, x):
  
-        """
+        r"""
         Evaluate the elliptic curve polynomial at 'x'
 
         Args:
