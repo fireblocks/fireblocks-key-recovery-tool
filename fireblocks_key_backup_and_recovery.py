@@ -28,62 +28,52 @@ QR_CODE_VERIFICATION = 'QR_CODE_VERIFICATION'
 KEY_SIZE = 4096
 PUBLIC_EXPONENT = 65537
 
-
-pubkey_descriptions = {
-    'MPC_ECDSA_SECP256K1': 'MPC_ECDSA_SECP256K1 XPUB',
-    'MPC_CMP_ECDSA_SECP256K1': 'MPC_ECDSA_SECP256K1 XPUB',
-    'MPC_EDDSA_ED25519': 'MPC_EdDSA_ED25519 extended public key (Fireblocks format)',
-    'MPC_CMP_EDDSA_ED25519': 'MPC_EdDSA_ED25519 extended public key (Fireblocks format)',
-}
-
-
-privkey_descriptions = {
-    'MPC_ECDSA_SECP256K1': 'MPC_ECDSA_SECP256K1 XPRV',
-    'MPC_CMP_ECDSA_SECP256K1': 'MPC_ECDSA_SECP256K1 XPRV',
-    'MPC_EDDSA_ED25519': 'MPC_EdDSA_ED25519 extended private key (Fireblocks format)',
-    'MPC_CMP_EDDSA_ED25519': 'MPC_EdDSA_ED25519 extended private key (Fireblocks format)',
-}
-
-
 menu_options = {
     CREATE_RECOVERY_KEY_PAIR: '1. Create a recovery key pair',
-    VERIFY_PUBLIC_KEY: '2. Verify the public backup key (for self-service backups)',
-    VERIFY_RECOVERY_PACKAGE: '3. Verify the recovery package',
-    REVEAL_PRV_BACKUP_KEY: '4. Reveal the private backup key',
-    EXIT_MENU: '5. Exit menu'
+    VERIFY_PUBLIC_KEY: '2. Verify the public recovery key to create a backup via the console',
+    VERIFY_RECOVERY_PACKAGE: '3. Verify the key backup package',
+    REVEAL_PRV_BACKUP_KEY: '4. Reveal the private workspace keys',
+    EXIT_MENU: '5. Exit'
 }
 
 
 public_key_verification_menu_options = {
     QR_CODE_VERIFICATION: '1. Display a scannable public key QR code',
-    SHORT_PHRASE_VERIFICATION: '2. Obtain a public key short phrase',
-    EXIT_MENU: '3. Exit menu'
+    SHORT_PHRASE_VERIFICATION: '2. Display a public key short phrase',
+    EXIT_MENU: '3. Exit'
 }
 
 
 def create_rsa_key_pair():
-    print(colored('Generating RSA private key, 4096 bit long modulus', 'cyan'))
+    print("""You are about to create a public and private recovery key
+The private recovery key will be encrypted with a passphrase that you choose.""")
+
+    change_file_name = inquirer.confirm('The key files are named "fb-recovery-public.pem" and "fb-recovery-private.pem" by default. Do you want to change these names?', default=False)
+
+    if change_file_name:
+        key_prefix = inquirer.text(
+            message='Enter a name for your recovery key files. The file names will be suffixed with  "-public.pem" and "-private.pem", respectively')
+    else:
+        key_prefix = DEFAULT_KEY_FILE_PREFIX
 
     passphrase = inquirer.password(
-        message='Enter passphrase for the private key')
+        message='Choose a private recovery key passphrase that you will remember')
     verify_passphrase = inquirer.password(
-        message=colored('Verifying', 'yellow') + ' - Enter passphrase for the private key')
+        message='Confirm the passphrase')
 
+    print('Verifying...')
     if not passphrase or not verify_passphrase or passphrase != verify_passphrase:
         print(colored('\nVerifying passphrase failed! Please try again', 'red'))
         return
 
-    key_prefix = inquirer.text(
-        message="Enter your key files names or press enter for default", default=DEFAULT_KEY_FILE_PREFIX)
-
-    public_key_file_name = key_prefix + '-pub.pem'
-    private_key_file_name = key_prefix + '-prv.pem'
+    public_key_file_name = key_prefix + '-public.pem'
+    private_key_file_name = key_prefix + '-private.pem'
 
     if(os.path.exists(public_key_file_name) or os.path.exists(private_key_file_name)):
-        print(colored("\nPublic or private key files with this name already exists!. Can't override\n", "red", attrs=['bold']))
+        print(colored("\nPublic or private key files with this name already exists!. Can't override\n", 'red', attrs=['bold']))
         return
 
-    wait = animation.Wait('spinner', colored('\nGenerating keys...', 'yellow'))
+    wait = animation.Wait('spinner', colored('\nGenerating key pair...', 'yellow'))
     wait.start()
 
     private_key = rsa.generate_private_key(
@@ -115,15 +105,13 @@ def create_rsa_key_pair():
     public_key_file.write(pem_public_key.decode())
     public_key_file.close()
 
-    print(colored("\nCreated files: ${private_key_file_name} ", "cyan"))
-
+    print('\nThe recovery key pair was created')
 
 def pop_validate_pub_key_menu():
     print('\n')
     return inquirer.list_input(message=colored(
-        "Choose the verification method: ", 'green'),
-        choices=public_key_verification_menu_options.values(),
-    )
+        'Choose the verification method: ', 'green'),
+        choices=public_key_verification_menu_options.values())
 
 def is_pem_public_key(key_str):
     try:
@@ -133,20 +121,20 @@ def is_pem_public_key(key_str):
         return False
     
 def verify_public_key():
-    print(colored('Verfying public key for backup and recovery\n', 'cyan'))
+    print('Workspace admins can approve the key backup using the Fireblocks mobile app.\n')
 
     file_path = inquirer.text(
-        message="Enter your public key file name or press enter for default", default=DEFAULT_KEY_FILE_PREFIX + '-pub.pem')
+        message='Enter the public recovery key file name or press "Enter" to use the default name', default=DEFAULT_KEY_FILE_PREFIX + '-public.pem')
 
     if not os.path.exists(file_path):
-        print(colored('\nPublic key file: {} not found.\n'.format(file_path), "red", attrs=['bold']))
+        print(colored('\nPublic key file: {} not found.\n'.format(file_path), 'red', attrs=['bold']))
         return
 
     with open(file_path, 'r') as _pub_key:
         pub_key = _pub_key.read()
     
     if not is_pem_public_key(pub_key):
-        print(colored('\nPublic key file: {} is not a valid PEM public key.\n'.format(file_path), "red", attrs=['bold']))
+        print(colored('\nPublic key file: {} is not a valid PEM public key.\n'.format(file_path), 'red', attrs=['bold']))
         return
 
     cont = True
@@ -157,7 +145,7 @@ def verify_public_key():
             print(colored(
                 "Opened the QR image file for you (local run only), and saved it on your machine as pub_key_qr.png", "cyan"))
         elif menu_options == public_key_verification_menu_options[SHORT_PHRASE_VERIFICATION]:
-            print(colored("The short phrase is: " + colored(create_short_checksum(pub_key), attrs=['bold']), "cyan"))
+            print(colored("The public key short phrase is: " + colored(create_short_checksum(pub_key), attrs=['bold']), "cyan"))
         elif menu_options == public_key_verification_menu_options[EXIT_MENU]:
             cont=False
         else:
@@ -168,7 +156,7 @@ def verify_public_key():
 def get_recover_keys_args():
     questions = [
         inquirer.Text('backup', message='Enter the backup zip file name'),
-        inquirer.Text('key', message='Enter the rsa private key file name or press enter for default', default=DEFAULT_KEY_FILE_PREFIX + '-prv.pem'),
+        inquirer.Text('key', message='Enter the rsa private key file name or press enter for default', default=DEFAULT_KEY_FILE_PREFIX + '-private.pem'),
         inquirer.Text('mobile_key', message=colored('Optional', attrs=['bold']) + ' Enter the mobile RSA private key file or press enter'),
     ]
 
@@ -176,36 +164,44 @@ def get_recover_keys_args():
 
 
 def recover_keys(show_xprv=False):
-    args = get_recover_keys_args()
-
-    if not os.path.exists(args["backup"]):
-        print('Backupfile: {} not found.'.format(args["backup"]))
-        exit(- 1)
-    if not os.path.exists(args["key"]):
-        print('RSA key: {} not found.'.format(args["key"]))
+    #args = get_recover_keys_args()
+    key = inquirer.text(message='Enter the private recovery key file name or press "Enter" to use the default name', default=DEFAULT_KEY_FILE_PREFIX + '-private.pem')
+    if not os.path.exists(key):
+        print('RSA key: {} not found.'.format(key))
         exit(-1)
 
-    mobile_key_pass = None
-    passphrase = None
-    
-    if args["mobile_key"] == '':
-        passphrase = inquirer.password(message='Please enter the mobile recovery passphrase')
-    else:
-        with open(args["mobile_key"], 'r') as _key:
-            key_file = _key.readlines()
-            if 'ENCRYPTED' in key_file[0] or 'ENCRYPTED' in key_file[1]:
-                mobile_key_pass = inquirer.password(message='Please enter mobile recovery RSA private key passphrase')
-
-    with open(args["key"], 'r') as _key:
+    with open(key, 'r') as _key:
         key_file = _key.readlines()
         if 'ENCRYPTED' in key_file[0] or 'ENCRYPTED' in key_file[1]:
-            key_pass = inquirer.password(message='Please enter recovery RSA private key passphrase')
+            key_pass = inquirer.password(message='Enter your private recovery key passphrase')
         else:
             key_pass = None
 
+    is_self_drs = inquirer.confirm(
+        message="Are you using an auto-generated passphrase? (This is not a default feature)", default=False)
+    mobile_key = None
+    mobile_key_pass = None
+
+    if not is_self_drs:
+        passphrase = inquirer.password(message='Enter the mobile recovery passphrase')
+    else:
+        mobile_key = inquirer.text(
+            message="Enter the private key file name that you used for your auto-generated passphrase")
+        with open(mobile_key, 'r') as _key:
+            key_file = _key.readlines()
+            if 'ENCRYPTED' in key_file[0] or 'ENCRYPTED' in key_file[1]:
+                mobile_key_pass = inquirer.password(message='Enter the passphrase for the private key file')
+
+    backup = inquirer.text(message='Enter the workspace key backup zip file name')
+
+    if not os.path.exists(backup):
+        print('Backupfile: {} not found.'.format(backup))
+        exit(- 1)
+
+    
     try:
         privkeys = recover.restore_key_and_chaincode(
-            args["backup"], args["key"], passphrase, key_pass, args["mobile_key"], mobile_key_pass)
+            backup, key, passphrase, key_pass, mobile_key, mobile_key_pass)
     except recover.RecoveryErrorMobileKeyDecrypt:
         print(colored("Failed to decrypt mobile Key. " + colored("Please make sure you have the mobile passphrase entered correctly.", attrs = ["bold"]), "cyan"))
         exit(-1)
@@ -219,23 +215,24 @@ def recover_keys(show_xprv=False):
         print(colored("Failed to decrypt mobile Key. " + colored("Please make sure you have the mobile private key entered correctly.", attrs = ["bold"]), "cyan"))
         exit(-1)
 
-    print("\n")
     for algo, info in privkeys.items():
         # info may be either None or tuple
+        print('ECDSA:' if 'ecdsa' in algo.lower() else 'EDDSA:')
         if info:
+            print('worksapce keys - ' + colored("Verified!", "green"))
             privkey, chaincode = info
             pub = recover.get_public_key(algo, privkey)
             if show_xprv:
-                print(privkey_descriptions[algo] + ":\t" + recover.encode_extended_key(algo, privkey, chaincode, False))
-            print(pubkey_descriptions[algo] + ":\t%s\t%s" % (recover.encode_extended_key(algo, pub, chaincode, True), colored("Verified!","green")))
+                print('extended private key:  ' + recover.encode_extended_key(algo, privkey, chaincode, False))
+            print('extended public key:   ' + recover.encode_extended_key(algo, pub, chaincode, True))
         else:
-            print(pubkey_descriptions[algo] + ":\t%s" % (colored("Verification failed","red")))
+            print('worksapce keys - ' + colored("Not verified!", "red"))
     print("\n")
 
 
 def reveal_backup_private_key():
-    show_prv = inquirer.confirm(colored(
-        colored('Warning', attrs=['bold']) + ' This will reveal your private key. Make sure no one else can see your screen.\nContinue?', 'yellow'), default=False)
+    show_prv = inquirer.confirm(
+        colored('Sensitive data warning!', 'yellow', attrs=['bold']) + ' Are you sure you want to proceed to reveal the private backup key?', default=False)
     if show_prv:
         recover_keys(True)
 
