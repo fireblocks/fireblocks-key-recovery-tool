@@ -29,18 +29,18 @@ KEY_SIZE = 4096
 PUBLIC_EXPONENT = 65537
 
 menu_options = {
-    CREATE_RECOVERY_KEY_PAIR: '1. Create a recovery key pair',
-    VERIFY_PUBLIC_KEY: '2. Verify the public recovery key to create a backup via the console',
-    VERIFY_RECOVERY_PACKAGE: '3. Verify the key backup package',
-    REVEAL_PRV_BACKUP_KEY: '4. Reveal the private workspace keys',
-    EXIT_MENU: '5. Exit'
+    CREATE_RECOVERY_KEY_PAIR: 'Create a recovery key pair',
+    VERIFY_PUBLIC_KEY: 'Verify the public recovery key to create a backup via the console',
+    VERIFY_RECOVERY_PACKAGE: 'Verify the key backup package',
+    REVEAL_PRV_BACKUP_KEY: 'Reveal the private workspace keys',
+    EXIT_MENU: 'Exit'
 }
 
 
 public_key_verification_menu_options = {
-    QR_CODE_VERIFICATION: '1. Display a scannable public key QR code',
-    SHORT_PHRASE_VERIFICATION: '2. Display a public key short phrase',
-    EXIT_MENU: '3. Exit'
+    QR_CODE_VERIFICATION: 'Display a scannable public key QR code',
+    SHORT_PHRASE_VERIFICATION: 'Display a public key short phrase',
+    EXIT_MENU: 'Exit'
 }
 
 
