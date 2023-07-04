@@ -3,12 +3,7 @@
 
 import os
 from utils import recover
-import argparse
-import getpass
-import sys
 from termcolor import colored
-from colorama import init, Fore, Style
-import inquirer
 import questionary
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
@@ -16,7 +11,6 @@ from utils.public_key_verification import create_short_checksum
 from utils.public_key_verification import create_and_pop_qr
 import animation
 
-init()
 
 CREATE_RECOVERY_KEY_PAIR = 'CREATE_RECOVERY_KEY_PAIR'
 VERIFY_PUBLIC_KEY = 'VERIFY_PUBLIC_KEY'
@@ -115,7 +109,8 @@ The private recovery key will be encrypted with a passphrase that you choose."""
     public_key_file.write(pem_public_key.decode())
     public_key_file.close()
 
-    print('\nThe recovery key pair was created.')
+    print('The recovery key pair was created. Press "Enter" to to return to the main menu')
+    input()
 
 def pop_validate_pub_key_menu():
     print('\n')
@@ -136,8 +131,10 @@ def verify_public_key():
 
     file_path = questionary.path(
         message='Enter the public recovery key file name or press "Enter" to use the default name', 
-        default=DEFAULT_KEY_FILE_PREFIX + '-public.pem'
     ).ask()
+
+    if file_path == '':
+        file_path = DEFAULT_KEY_FILE_PREFIX + '-public.pem'
 
     if not os.path.exists(file_path):
         print(colored('\nPublic key file: {} not found.\n'.format(file_path), 'red', attrs=['bold']))
@@ -150,6 +147,7 @@ def verify_public_key():
         print(colored('\nPublic key file: {} is not a valid PEM public key.\n'.format(file_path), 'red', attrs=['bold']))
         return
 
+    print('\nFound public recovery key file: {}'.format(file_path))
     cont = True
     while cont:
         menu_options = pop_validate_pub_key_menu()
@@ -159,11 +157,13 @@ def verify_public_key():
                 "Opened the QR image file for you (local run only), and saved it on your machine as pub_key_qr.png", "cyan"))
         elif menu_options == public_key_verification_menu_options[SHORT_PHRASE_VERIFICATION]:
             print(colored("The public key short phrase is: " + colored(create_short_checksum(pub_key), attrs=['bold']), "cyan"))
+            print("Press 'Enter' to continue...")
+            input()
         elif menu_options == public_key_verification_menu_options[GO_BACK]:
             cont=False
         else:
             print(colored('Not a valid choise', 'red', attrs=['bold']))
-            exit(-1)
+            return
 
 
 def recover_keys(show_xprv=False):
@@ -173,11 +173,14 @@ def recover_keys(show_xprv=False):
     if not os.path.exists(backup):
         print('Backupfile: {} not found.'.format(backup))
         return
-
-    key = questionary.text(
+    
+    key = questionary.path(
         message='Enter the private recovery key file name or press "Enter" to use the default name', 
-        default=DEFAULT_KEY_FILE_PREFIX + '-private.pem'
     ).ask()
+
+    if key == '':
+        key = DEFAULT_KEY_FILE_PREFIX + '-private.pem'
+
     if not os.path.exists(key):
         print('File not found - {}.'.format(key))
         return
@@ -207,9 +210,9 @@ def recover_keys(show_xprv=False):
         mobile_key = questionary.path(
             message="Enter the private key file name that you used for your auto-generated passphrase"
         ).ask()
-        # if not os.path.exists(mobile_key):
-        #     print('File not found - {}.'.format(mobile_key))
-        #     return
+        if not os.path.exists(mobile_key):
+            print('File not found - {}.'.format(mobile_key))
+            return
         with open(mobile_key, 'r') as _key:
             key_file = _key.readlines()
             if 'ENCRYPTED' in key_file[0] or 'ENCRYPTED' in key_file[1]:
