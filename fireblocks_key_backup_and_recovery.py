@@ -18,6 +18,8 @@ VERIFY_RECOVERY_PACKAGE = 'VERIFY_RECOVERY_PACKAGE'
 REVEAL_PRV_BACKUP_KEY = 'REVEAL_PRV_BACKUP_KEY'
 EXIT_MENU = 'EXIT_MENU'
 GO_BACK = 'GO_BACK'
+ECDSA = 'ECDSA'
+EDDSA = 'EDDSA'
 
 DEFAULT_KEY_FILE_PREFIX = 'fb-recovery'
 
@@ -26,6 +28,11 @@ QR_CODE_VERIFICATION = 'QR_CODE_VERIFICATION'
 
 KEY_SIZE = 4096
 PUBLIC_EXPONENT = 65537
+
+algorithms = {
+    ECDSA: 'ECDSA (used for signing transactions for most blockchains supported by Fireb`locks)',
+    EDDSA: 'EDDSA (used for signing transactions for Algorand, Cardano, Polkadot, Solana, Stellar and Ripple blockchains)'
+}
 
 menu_options = {
     CREATE_RECOVERY_KEY_PAIR: 'Create a recovery key pair',
@@ -53,18 +60,18 @@ The private recovery key will be encrypted with a passphrase that you choose."""
         ).ask()
     if change_file_name:
         key_prefix = questionary.text(
-            'Enter a name for your recovery key files. The file names will be suffixed with "-public.pem" and "-private.pem", respectively'
+            'Enter a name for your recovery key files. The file names will be suffixed with "-public.pem" and "-private.pem", respectively.'
             ).ask()
     else:
         key_prefix = DEFAULT_KEY_FILE_PREFIX
 
     passphrase = questionary.password(
-        message='Choose a private recovery key passphrase that you will remember',
+        message='Choose a private recovery key passphrase that you will remember.',
         validate=lambda password: True if len(password) > 0 else "Please enter a value"
         ).ask()
     questionary.password(
-        message='Confirm the passphrase',
-        validate=lambda password: True if (len(password) > 0 and password == passphrase) else "Passphrase not verified"
+        message='Confirm the passphrase.',
+        validate=lambda password: True if (len(password) > 0 and password == passphrase) else 'Passphrase not verified'
         ).ask()
 
     public_key_file_name = key_prefix + '-public.pem'
@@ -74,7 +81,7 @@ The private recovery key will be encrypted with a passphrase that you choose."""
     print('Private key file name: {}'.format(private_key_file_name))
 
     if(os.path.exists(public_key_file_name) or os.path.exists(private_key_file_name)):
-        print(colored("\nPublic or private key files with this name already exists! Can't override\n", 'red', attrs=['bold']))
+        print(colored("\nPublic or private key files with this name already exists.", 'red', attrs=['bold']))
         return
 
     wait = animation.Wait('spinner', colored('\nGenerating key pair...', 'yellow'))
@@ -109,7 +116,7 @@ The private recovery key will be encrypted with a passphrase that you choose."""
     public_key_file.write(pem_public_key.decode())
     public_key_file.close()
 
-    print('The recovery key pair was created. Press "Enter" to to return to the main menu')
+    print('The recovery key pair was created. Press Enter to to return to the main menu.')
     input()
 
 def pop_validate_pub_key_menu():
@@ -130,7 +137,7 @@ def verify_public_key():
     print('Workspace admins can approve the key backup using the Fireblocks mobile app.\n')
 
     file_path = questionary.path(
-        message='Enter the public recovery key file name or press "Enter" to use the default name', 
+        message='Enter the public recovery key file name or press Enter to use the default name.', 
     ).ask()
 
     if file_path == '':
@@ -154,7 +161,7 @@ def verify_public_key():
         if menu_options == public_key_verification_menu_options[QR_CODE_VERIFICATION]:
             create_and_pop_qr(pub_key)
             print(colored(
-                "Opened the QR image file for you (local run only), and saved it on your machine as pub_key_qr.png", "cyan"))
+                "Opened the QR image file for you (local run only), and saved it on your machine as pub_key_qr.png.", "cyan"))
         elif menu_options == public_key_verification_menu_options[SHORT_PHRASE_VERIFICATION]:
             print(colored("The public key short phrase is: " + colored(create_short_checksum(pub_key), attrs=['bold']), "cyan"))
             print("Press 'Enter' to continue...")
@@ -162,20 +169,20 @@ def verify_public_key():
         elif menu_options == public_key_verification_menu_options[GO_BACK]:
             cont=False
         else:
-            print(colored('Not a valid choise', 'red', attrs=['bold']))
+            print(colored('Not a valid choise.', 'red', attrs=['bold']))
             return
 
 
 def recover_keys(show_xprv=False):
     backup = questionary.path(
-        message='Enter the key backup package (zip) file name'
+        message='Enter the key backup package (zip) file name.'
     ).ask()
     if not os.path.exists(backup):
         print('Backupfile: {} not found.'.format(backup))
         return
     
     key = questionary.path(
-        message='Enter the private recovery key file name or press "Enter" to use the default name', 
+        message='Enter the private recovery key file name or press Enter to use the default name.', 
     ).ask()
 
     if key == '':
@@ -189,13 +196,13 @@ def recover_keys(show_xprv=False):
         key_file = _key.readlines()
         if 'ENCRYPTED' in key_file[0] or 'ENCRYPTED' in key_file[1]:
             key_pass = questionary.password(
-                message='Enter your private recovery key passphrase'
+                message='Enter your private recovery key passphrase.'
             ).ask()
         else:
             key_pass = None
 
     is_self_drs = questionary.confirm(
-        message="Are you using an auto-generated passphrase? (This is not a default feature)", 
+        message="Are you using an auto-generated passphrase? (This is not a default feature).", 
         default=False
     ).ask()
     mobile_key = None
@@ -208,7 +215,7 @@ def recover_keys(show_xprv=False):
         ).ask()
     else:
         mobile_key = questionary.path(
-            message="Enter the private key file name that you used for your auto-generated passphrase"
+            message='Enter the private key file name that you used for your auto-generated passphrase.'
         ).ask()
         if not os.path.exists(mobile_key):
             print('File not found - {}.'.format(mobile_key))
@@ -217,7 +224,7 @@ def recover_keys(show_xprv=False):
             key_file = _key.readlines()
             if 'ENCRYPTED' in key_file[0] or 'ENCRYPTED' in key_file[1]:
                 mobile_key_pass = questionary.password(
-                    message='Enter the passphrase for the private key file'
+                    message='Enter the passphrase for the private key file.'
                 ).ask()
 
 
@@ -233,7 +240,7 @@ and the passphrase to the owner key share, all entered correctly.\n""", 'red', a
 
     for algo, info in privkeys.items():
         # info may be either None or tuple
-        print('ECDSA:' if 'ecdsa' in algo.lower() else 'EDDSA:')
+        print(algorithms[ECDSA] if 'ecdsa' in algo.lower() else algorithms[EDDSA])
         if info:
             print('worksapce keys - ' + colored("Verified!", "green"))
             privkey, chaincode = info
