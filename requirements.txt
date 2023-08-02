@@ -11,7 +11,7 @@ crypto==1.4.1
 qrcode==7.3.1
 Pillow==9.3.0
 inquirer==2.9.0
-cryptography==38.0.4
+cryptography==41.0.3
 animation==0.0.7
 base58==2.1.1
 pytezos==3.7.1
