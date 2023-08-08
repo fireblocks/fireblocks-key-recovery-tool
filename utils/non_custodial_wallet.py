@@ -46,6 +46,7 @@ class InvalidWalletId(RecoveryError):
 @dataclass
 class WalletMaster:
     wallet_seed: bytes
+    asset_seed: bytes
     master_key_for_cosigner: Dict[str, bytes]
 
 
@@ -94,6 +95,7 @@ def recover_wallet_master(zip_path: os.PathLike, private_pem_path: os.PathLike, 
 
         key_id = wallet_master_key_ids[0]
         wallet_seed = master_keys[key_id].wallet_seed
+        asset_seed = master_keys[key_id].asset_seed
 
         cosigner_keys = {}
         for cosigner in master_keys[key_id].cosigners:
@@ -116,6 +118,7 @@ def recover_wallet_master(zip_path: os.PathLike, private_pem_path: os.PathLike, 
 
         return WalletMaster(
             wallet_seed=wallet_seed,
+            asset_seed=asset_seed,
             master_key_for_cosigner=cosigner_keys
         )
 
@@ -148,3 +151,10 @@ def derive_non_custodial_wallet_cloud_shares(wallet_master: WalletMaster, wallet
         result[cosigner_id] = wallet_share.to_bytes(32, byteorder="big")
 
     return result
+
+
+def derive_non_custodial_wallet_asset_chaincode(wallet_master: WalletMaster, wallet_id: str) -> bytes:
+    if not is_valid_wallet_id(wallet_id):
+        raise InvalidWalletId(wallet_id)
+
+    return hashlib.sha256(wallet_id.encode() + wallet_master.asset_seed).digest()

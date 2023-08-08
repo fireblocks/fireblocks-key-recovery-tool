@@ -23,6 +23,7 @@ class SigningKeyMetadata:
 class MasterKeyMetadata:
     key_type: str
     wallet_seed: bytes
+    asset_seed: bytes
     cosigners: List[CoSignerMetadata]
 
 
@@ -69,6 +70,7 @@ def parse_metadata_file(fp: IO[bytes]) -> RecoveryPackageMetadata:
     for key_id, key_metadata in master_keys_in_backup.items():
         key_type = key_metadata["type"]
         wallet_seed = bytes.fromhex(key_metadata["walletSeed"])
+        asset_seed = bytes.fromhex(key_metadata["assetSeed"])
 
         cosigners = []
         for cosigner_obj in key_metadata["cosigners"]:
@@ -80,6 +82,7 @@ def parse_metadata_file(fp: IO[bytes]) -> RecoveryPackageMetadata:
         master_keys[key_id] = MasterKeyMetadata(
             key_type=key_type,
             wallet_seed=wallet_seed,
+            asset_seed=asset_seed,
             cosigners=cosigners
         )
 
