@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
 from utils import recover
 from termcolor import colored
 import questionary
@@ -132,7 +133,7 @@ def is_pem_public_key(key_str):
         return True
     except (ValueError, TypeError, AttributeError):
         return False
-    
+        
 def verify_public_key():
     print('Workspace admins can approve the key backup using the Fireblocks mobile app.\n')
 
@@ -160,8 +161,6 @@ def verify_public_key():
         menu_options = pop_validate_pub_key_menu()
         if menu_options == public_key_verification_menu_options[QR_CODE_VERIFICATION]:
             create_and_pop_qr(pub_key)
-            print(colored(
-                "Opened the QR image file for you (local run only), and saved it on your machine as pub_key_qr.png.", "cyan"))
         elif menu_options == public_key_verification_menu_options[SHORT_PHRASE_VERIFICATION]:
             print(colored("The public key short phrase is: " + colored(create_short_checksum(pub_key), attrs=['bold']), "cyan"))
             print("Press 'Enter' to continue...")
