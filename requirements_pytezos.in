@@ -11,6 +11,7 @@ jupyter-events==0.6.0
 Pillow==9.3.0
 py-algorand-sdk==1.8.0
 pycryptodome==3.11.0
+pytezos==3.7.1
 qrcode==7.3.1
 solana==0.25.0
 stellar_base==1.1.2.0
