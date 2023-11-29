@@ -6,8 +6,6 @@ crypto==1.4.1
 cryptography~=41.0.0
 gql==3.4.0
 inquirer==2.9.0
-jsonschema[format-nongpl]==4.17.3
-jupyter-events==0.6.0
 Pillow==9.3.0
 py-algorand-sdk==1.8.0
 pycryptodome==3.11.0
