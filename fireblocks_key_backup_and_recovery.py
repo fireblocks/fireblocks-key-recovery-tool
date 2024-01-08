@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
-from utils import recover
-import argparse
-import getpass
-import sys
-from termcolor import colored
-import inquirer
+from utils.public_key_verification import create_short_checksum, create_and_pop_qr
+from utils import recover, non_custodial_wallet
+
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
-from utils.public_key_verification import create_short_checksum
-from utils.public_key_verification import create_and_pop_qr
+from termcolor import colored
+
 import animation
+import collections
+import inquirer
+import json
+import os
 
 CREATE_RECOVERY_KEY_PAIR = 'CREATE_RECOVERY_KEY_PAIR'
 VERIFY_PUBLIC_KEY = 'VERIFY_PUBLIC_KEY'
 VERIFY_RECOVERY_PACKAGE = 'VERIFY_RECOVERY_PACKAGE'
 REVEAL_PRV_BACKUP_KEY = 'REVEAL_PRV_BACKUP_KEY'
+RECOVER_NCW_KEY_SHARES = 'RECOVER_NCW_KEY_SHARES'
 EXIT_MENU = 'EXIT_MENU'
 
 DEFAULT_KEY_FILE_PREFIX = 'fb-recovery'
@@ -33,6 +34,7 @@ menu_options = {
     VERIFY_PUBLIC_KEY: 'Verify the public recovery key to create a backup via the console',
     VERIFY_RECOVERY_PACKAGE: 'Verify the key backup package',
     REVEAL_PRV_BACKUP_KEY: 'Reveal the private workspace keys',
+    RECOVER_NCW_KEY_SHARES: 'Recover non-custodial wallet cloud shares',
     EXIT_MENU: 'Exit'
 }
 
@@ -149,33 +151,26 @@ def verify_public_key():
         elif menu_options == public_key_verification_menu_options[EXIT_MENU]:
             cont=False
         else:
-            print(colored('Not a valid choise', 'red', attrs=['bold']))
+            print(colored('Not a valid choice', 'red', attrs=['bold']))
             exit(-1)
 
 
-def get_recover_keys_args():
-    questions = [
-        inquirer.Text('backup', message='Enter the backup zip file name'),
-        inquirer.Text('key', message='Enter the rsa private key file name or press enter for default', default=DEFAULT_KEY_FILE_PREFIX + '-private.pem'),
-        inquirer.Text('mobile_key', message=colored('Optional', attrs=['bold']) + ' Enter the mobile RSA private key file or press enter'),
-    ]
-
-    return inquirer.prompt(questions)
+def key_file_is_encryped(key_path: str) -> bool:
+    with open(key_path, 'r') as key:
+        key_file = key.readlines()
+        return 'ENCRYPTED' in key_file[0] or 'ENCRYPTED' in key_file[1]
 
 
 def recover_keys(show_xprv=False):
-    #args = get_recover_keys_args()
     key = inquirer.text(message='Enter the private recovery key file name or press "Enter" to use the default name', default=DEFAULT_KEY_FILE_PREFIX + '-private.pem')
     if not os.path.exists(key):
         print('RSA key: {} not found.'.format(key))
         exit(-1)
 
-    with open(key, 'r') as _key:
-        key_file = _key.readlines()
-        if 'ENCRYPTED' in key_file[0] or 'ENCRYPTED' in key_file[1]:
-            key_pass = inquirer.password(message='Enter your private recovery key passphrase')
-        else:
-            key_pass = None
+    if key_file_is_encryped(key):
+        key_pass = inquirer.password(message='Enter your private recovery key passphrase')
+    else:
+        key_pass = None
 
     is_self_drs = inquirer.confirm(
         message="Are you using an auto-generated passphrase? (This is not a default feature)", default=False)
@@ -187,18 +182,16 @@ def recover_keys(show_xprv=False):
     else:
         mobile_key = inquirer.text(
             message="Enter the private key file name that you used for your auto-generated passphrase")
-        with open(mobile_key, 'r') as _key:
-            key_file = _key.readlines()
-            if 'ENCRYPTED' in key_file[0] or 'ENCRYPTED' in key_file[1]:
-                mobile_key_pass = inquirer.password(message='Enter the passphrase for the private key file')
+
+        if key_file_is_encryped(mobile_key):
+            mobile_key_pass = inquirer.password(message='Enter the passphrase for the private key file')
 
     backup = inquirer.text(message='Enter the workspace key backup zip file name')
 
     if not os.path.exists(backup):
         print('Backupfile: {} not found.'.format(backup))
-        exit(- 1)
+        exit(-1)
 
-    
     try:
         privkeys = recover.restore_key_and_chaincode(
             backup, key, passphrase, key_pass, mobile_key, mobile_key_pass)
@@ -237,6 +230,90 @@ def reveal_backup_private_key():
         recover_keys(True)
 
 
+def process_wallet_ids(line_iter):
+    for line_no, line in enumerate(line_iter):
+        line = line.strip()
+        if not line:
+            continue
+
+        if not non_custodial_wallet.is_valid_wallet_id(line):
+            print(colored('Value at line {} is not a single valid wallet ID. Skipping'.format(line_no), 'cyan'))
+            continue
+
+        yield line
+
+
+def get_all_wallet_ids(wallets_file: str, wallets: str):
+    if wallets_file:
+        with open(wallets_file, 'r') as f:
+            yield from process_wallet_ids(f)
+    else:
+        yield from process_wallet_ids(wallets.splitlines())
+
+
+def recover_end_user_wallet_shares():
+    backup = inquirer.text(message='Enter the backup Zip file name')
+    if not os.path.exists(backup):
+        print('Backup file {} not found!'.format(backup))
+        exit(-1)
+
+    key = inquirer.text(message='Enter the RSA recovery private key file name or press enter for default', default=DEFAULT_KEY_FILE_PREFIX + '-private.pem')
+    if not os.path.exists(key):
+        print('RSA key file {} not found!'.format(key))
+        exit(-1)
+
+    key_pass = None
+    if key_file_is_encryped(key):
+        key_pass = inquirer.password(message='Please enter recovery RSA private key passphrase')
+
+    wallet_master = None
+    try:
+        wallet_master = non_custodial_wallet.recover_wallet_master(backup, key, key_pass)
+    except recover.RecoveryErrorRSAKeyImport:
+        print(colored("Failed to import RSA Key. " + colored("Please make sure you have the RSA passphrase entered correctly.", attrs = ["bold"]), "cyan"))
+        exit(-1)
+    except non_custodial_wallet.MissingWalletMasterKeyId:
+        print(colored("Wallet master key not found in backup ZIP. " + colored("Please make sure the backup file was generated for a workspace fully enrolled with the Fireblocks Non Custodial Wallet offering.", attrs = ["bold"]), "cyan"))
+        exit(-1)
+
+    wallets = None
+    wallets_file = inquirer.text(message='Enter the wallets file (a text file containing one wallet ID per line), or press enter for an editor')
+    if wallets_file and not os.path.exists(wallets_file):
+        print('Wallets file {} not found!'.format(wallets_file))
+        exit(-1)
+    elif not wallets_file:
+        wallets = inquirer.editor(message='Please enter one wallet ID per line')
+
+    result = collections.OrderedDict()
+    for wallet_id in get_all_wallet_ids(wallets_file, wallets):
+        chaincode = non_custodial_wallet.derive_non_custodial_wallet_asset_chaincode(wallet_master, wallet_id)
+        ecdsa_shares = non_custodial_wallet.derive_non_custodial_wallet_cloud_shares(wallet_master, wallet_id, "MPC_CMP_ECDSA_SECP256K1")
+
+        result[wallet_id] = {
+            'chaincode': chaincode.hex(),
+            'shares': []
+        }
+
+        for cosigner_id in wallet_master.master_key_for_cosigner.keys():
+            result[wallet_id]['shares'].append({
+                'cosigner': cosigner_id,
+                'ECDSA': ecdsa_shares[cosigner_id].hex()
+            })
+
+    output_file = inquirer.text(message='Enter the name for the result JSON file', validate=lambda a, current: bool(current))
+    if os.path.exists(output_file):
+        print('Output file {} already exists! Will not override it.'.format(output_file))
+        exit(-1)
+
+    with open(output_file, 'wt') as fp:
+        json.dump(result, fp)
+
+    print('\nWrote cloud shares for {} wallets into {}. {}\n'.format(
+          len(result),
+          output_file,
+          colored('Keep it safe!', attrs = ['bold'])))
+
+
 def pop_main_menu():
     return inquirer.list_input(message=colored(
         "What do you want to do?", "green"),
@@ -245,7 +322,6 @@ def pop_main_menu():
 
 
 def main():
-
     print(colored("\nWelcome to the Fireblocks backup and recovery tool\n", "cyan"))
     cont = True
 
@@ -259,10 +335,12 @@ def main():
             recover_keys()
         elif menu_option == menu_options[REVEAL_PRV_BACKUP_KEY]:
             reveal_backup_private_key()
+        elif menu_option == menu_options[RECOVER_NCW_KEY_SHARES]:
+            recover_end_user_wallet_shares()
         elif menu_option == menu_options[EXIT_MENU]:
             cont = False
         else:
-            print(colored('Not a valid choise', 'red'))
+            print(colored('Not a valid choice', 'red'))
             exit(-1)
 
     print(colored('Goodbye', 'yellow'))
