@@ -246,18 +246,18 @@ def process_wallet_ids(line_iter):
 def get_all_wallet_ids(wallets_file: str, wallets: str):
     if wallets_file:
         with open(wallets_file, 'r') as f:
-            yield from process_wallet_ids(f)
+            yield from process_wallet_ids(f.readlines())
     else:
         yield from process_wallet_ids(wallets.splitlines())
 
 
 def recover_end_user_wallet_shares():
-    backup = inquirer.text(message='Enter the backup Zip file name')
+    backup = inquirer.text(message='Enter the path to the backup Zip file')
     if not os.path.exists(backup):
         print('Backup file {} not found!'.format(backup))
         exit(-1)
 
-    key = inquirer.text(message='Enter the RSA recovery private key file name or press enter for default', default=DEFAULT_KEY_FILE_PREFIX + '-private.pem')
+    key = inquirer.text(message='Enter the path to the RSA recovery private key file or press enter for default', default=DEFAULT_KEY_FILE_PREFIX + '-private.pem')
     if not os.path.exists(key):
         print('RSA key file {} not found!'.format(key))
         exit(-1)
@@ -277,7 +277,7 @@ def recover_end_user_wallet_shares():
         exit(-1)
 
     wallets = None
-    wallets_file = inquirer.text(message='Enter the wallets file (a text file containing one wallet ID per line), or press enter for an editor')
+    wallets_file = inquirer.text(message='Enter the path to the wallets file (a text file containing one wallet ID per line), or press enter for an editor')
     if wallets_file and not os.path.exists(wallets_file):
         print('Wallets file {} not found!'.format(wallets_file))
         exit(-1)
@@ -287,7 +287,7 @@ def recover_end_user_wallet_shares():
     result = collections.OrderedDict()
     for wallet_id in get_all_wallet_ids(wallets_file, wallets):
         chaincode = non_custodial_wallet.derive_non_custodial_wallet_asset_chaincode(wallet_master, wallet_id)
-        ecdsa_shares = non_custodial_wallet.derive_non_custodial_wallet_cloud_shares(wallet_master, wallet_id, "MPC_CMP_ECDSA_SECP256K1")
+        ecdsa_shares = non_custodial_wallet.derive_non_custodial_wallet_cloud_shares(wallet_master, wallet_id, 'MPC_CMP_ECDSA_SECP256K1')
 
         result[wallet_id] = {
             'chaincode': chaincode.hex(),
@@ -297,7 +297,7 @@ def recover_end_user_wallet_shares():
         for cosigner_id in wallet_master.master_key_for_cosigner.keys():
             result[wallet_id]['shares'].append({
                 'cosigner': cosigner_id,
-                'ECDSA': ecdsa_shares[cosigner_id].hex()
+                'MPC_CMP_ECDSA_SECP256K1': ecdsa_shares[cosigner_id].hex()
             })
 
     output_file = inquirer.text(message='Enter the name for the result JSON file', validate=lambda a, current: bool(current))
@@ -305,6 +305,7 @@ def recover_end_user_wallet_shares():
         print('Output file {} already exists! Will not override it.'.format(output_file))
         exit(-1)
 
+    output_file = os.path.abspath(output_file)
     with open(output_file, 'wt') as fp:
         json.dump(result, fp)
 
