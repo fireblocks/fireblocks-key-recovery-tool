@@ -37,6 +37,7 @@ algorithm_enum_mapping = {
     'MPC_CMP_EDDSA_ED25519': 1,
 }
 
+METADATA_LOCATION = 'metadata.json'
 
 class RecoveryErrorPublicKeyNoMatch(RecoveryError):
     pass
@@ -44,17 +45,17 @@ class RecoveryErrorPublicKeyNoMatch(RecoveryError):
 
 class RecoveryErrorKeyIdNotInMetadata(RecoveryError):
     def __init__(self, key_id: str):
-        super().__init__(f"Found key id {key_id} in zip file, but it doesn't exist in metadata.json")
+        super().__init__(f"Found key id {key_id} in zip file, but it doesn't exist in {METADATA_LOCATION}")
 
 
 class RecoveryErrorKeyIdMissing(RecoveryError):
     def __init__(self, key_id: str):
-        super().__init__(f"metadata.json contains key id {key_id}, which wasn't found in zip file")
+        super().__init__(f"{METADATA_LOCATION} contains key id {key_id}, which wasn't found in zip file")
 
 
 class RecoveryErrorUnknownAlgorithm(RecoveryError):
     def __init__(self, algo):
-        super().__init__(f"metadata.json contains unsupported signature algorithm {algo}")
+        super().__init__(f"{METADATA_LOCATION} contains unsupported signature algorithm {algo}")
 
 
 class RecoveryErrorMobileKeyDecrypt(RecoveryError):
@@ -162,13 +163,14 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
 
     cipher = PKCS1_OAEP.new(key)
     with ZipFile(zip_path, 'r') as zipfile:
-        if "metadata.json" not in zipfile.namelist():
+        file_names = zipfile.namelist()
+        if METADATA_LOCATION not in file_names:
             raise RecoveryErrorMetadataNotFound(zip_path)
 
-        with zipfile.open("metadata.json") as file:
+        with zipfile.open(METADATA_LOCATION) as file:
             signing_keys = parse_metadata_file(file).signing_keys
 
-        for name in zipfile.namelist():
+        for name in file_names:
             with zipfile.open(name) as file:
                 if name.startswith("MOBILE"):
                     obj = json.loads(file.read())
@@ -206,7 +208,7 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
                             raise RecoveryErrorUnknownAlgorithm(algo)
                         data = data[4:]
                     players_data[key_id][get_player_id(key_id, obj["deviceId"], False)] = int.from_bytes(data, byteorder='big')
-                elif name == "metadata.json":
+                elif name == METADATA_LOCATION:
                     continue
                 else:
                     if '_' in name:
