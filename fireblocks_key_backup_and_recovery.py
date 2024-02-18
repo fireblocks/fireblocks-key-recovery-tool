@@ -176,6 +176,7 @@ def recover_keys(show_xprv=False):
         message="Are you using an auto-generated passphrase? (This is not a default feature)", default=False)
     mobile_key = None
     mobile_key_pass = None
+    passphrase = None
 
     if not is_self_drs:
         passphrase = inquirer.password(message='Enter the mobile recovery passphrase')
