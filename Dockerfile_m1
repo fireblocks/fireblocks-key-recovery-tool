@@ -3,7 +3,7 @@ COPY requirements.txt /opt/
 ENV PATH "$PATH:/root/.cargo/bin"
 RUN  set -ex \
     \
-    && apt-get update && apt-get install -y --no-install-recommends gcc libc-dev curl wget xz-utils vim \
+    && apt-get update && apt-get install -y --no-install-recommends gcc libc-dev curl wget vim \
         && curl https://sh.rustup.rs -sSf > cargo.sh && /bin/bash ./cargo.sh -y \
     && rustup toolchain install nightly && rustup default nightly \
         && pip install --upgrade pip && pip install --disable-pip-version-check --no-cache-dir -r /opt/requirements.txt \
