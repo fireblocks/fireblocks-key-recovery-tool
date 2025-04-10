@@ -55,7 +55,7 @@ def withdraw_token(priv, transfer_params: TransferCheckedParams) -> RPCResponse:
 
 def get_blockhash():
     solana_client = Client(URL)
-    response = solana_client.get_recent_blockhash()
+    response = solana_client.get_latest_blockhash()
     try:
         blockhash = response['result']['value']['blockhash']
     except KeyError as err:
