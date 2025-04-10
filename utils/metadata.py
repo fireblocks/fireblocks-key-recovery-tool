@@ -17,6 +17,7 @@ class SigningKeyMetadata:
     public_key: str
     algorithm: str
     chain_code: bytes
+    keyset_id: int
 
 
 @dataclass
@@ -55,13 +56,18 @@ def parse_metadata_file(fp: IO[bytes]) -> RecoveryPackageMetadata:
         else:
             chain_code_for_this_key = default_chain_code
 
+        keyset_id_for_this_key = 1
+        if "keysetId" in key_metadata:
+            keyset_id_for_this_key = int(key_metadata["keysetId"])
+
         if len(chain_code_for_this_key) != 32:
             raise RecoveryErrorUnknownChainCode()
 
         signing_keys[key_id] = SigningKeyMetadata(
             public_key=metadata_public_key,
             algorithm=algo,
-            chain_code=chain_code_for_this_key
+            chain_code=chain_code_for_this_key,
+            keyset_id=keyset_id_for_this_key
         )
 
     master_keys_in_backup = obj.get("masterKeys", {})
