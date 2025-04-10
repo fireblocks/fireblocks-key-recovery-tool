@@ -4,22 +4,27 @@ from utils import recover
 
 TEST_DIR = pathlib.Path.resolve(pathlib.Path(__file__)).parent
 
+def result_list_to_dict(results):
+    result = {}
+    for algo, privkey, chaincode, keyset_id in results:
+        result[algo] = (privkey, chaincode, keyset_id)
+    return result
 
 def test_recovery_basic():
-    result = recover.restore_key_and_chaincode(TEST_DIR / "backup.zip", TEST_DIR / "priv.pem", "Thefireblocks1!")
-
-    ecdsa_priv_key, ecdsa_chaincode = result['MPC_ECDSA_SECP256K1']
+    result = result_list_to_dict(recover.restore_key_and_chaincode(TEST_DIR / "backup.zip", TEST_DIR / "priv.pem", "Thefireblocks1!"))
+    ecdsa_priv_key, ecdsa_chaincode, keyset_id = result['MPC_ECDSA_SECP256K1']
     assert(ecdsa_priv_key == 0x473d1820ca4bf7cf6b018a8520b1ec0849cb99bce4fff45c5598723f67b3bd52)
     pub = recover.get_public_key("MPC_ECDSA_SECP256K1", ecdsa_priv_key)
     assert(pub == "021d84f3b6d7c6888f81c7cc381b658d85319f27e1ea9c93dff128667fb4b82ba0")
     assert(recover.encode_extended_key('MPC_ECDSA_SECP256K1', ecdsa_priv_key, ecdsa_chaincode, False) == "xprv9s21ZrQH143K24Mfq5zL5MhWK9hUhhGbd45hLXo2Pq2oqzMMo63oStZzF9aunJDs4SsrmoxycAo6xxBTHawSz5sYxEy8TpCkv66Sci373DJ")
     assert(recover.encode_extended_key('MPC_ECDSA_SECP256K1', pub, ecdsa_chaincode, True) == "xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6QJJZSgiCXT6sq7wa2jCk5t4Vv1r1E4q1venKghAAdyzieufGyX")
+    assert(keyset_id == 1)
 
 
 def test_full_recovery():
-    result = recover.restore_key_and_chaincode(TEST_DIR / "backup_new.zip", TEST_DIR / "priv2.pem", "Thefireblocks1!")
-    ecdsa_priv_key, ecdsa_chaincode = result['MPC_ECDSA_SECP256K1']
-    eddsa_priv_key, eddsa_chaincode = result['MPC_EDDSA_ED25519']
+    result = result_list_to_dict(recover.restore_key_and_chaincode(TEST_DIR / "backup_new.zip", TEST_DIR / "priv2.pem", "Thefireblocks1!"))
+    ecdsa_priv_key, ecdsa_chaincode, keyset_id = result['MPC_ECDSA_SECP256K1']
+    eddsa_priv_key, eddsa_chaincode, keyset_id_eddsa = result['MPC_EDDSA_ED25519']
 
     assert(ecdsa_priv_key == 0x66b1baf063db6e7152480334ebab0ab098e85f682b784754e46c18c962a1aa9d)
     assert(eddsa_priv_key == 0xd74820d02cc2aa09e2d0bcb36aeb92625b3d92c8d202063eab5513fd4453a44)
@@ -35,11 +40,13 @@ def test_full_recovery():
     assert(pub == "0050cfee85dabebed78f43e94a1b7afd13c20461ad66efa083779bdeffd22269d9")
     assert(recover.encode_extended_key('MPC_EDDSA_ED25519', eddsa_priv_key, eddsa_chaincode, False) == "fprv4LsXPWzhTTp9ax8NGVwbnRFuT3avVQ4ydHNWcu8hCGZd18TRKxgAzbrpY9bLJRe4Y2AyX9TfQdDPbmqEYoDCTju9QFZbUgdsxsmUgfvuEDK")
     assert(recover.encode_extended_key('MPC_EDDSA_ED25519', pub, eddsa_chaincode, True) == "fpub8sZZXw2wbqVpURAAA9cCBpv2256rejFtCayHuRAzcYN1qciBxMVmB6UgiDAQTUZh5EP9JZciPQPjKAHyqPYHELqEHWkvo1sxreEJgLyfCJj")
+    assert(keyset_id == 1)
+    assert(keyset_id_eddsa == 1)
 
 
 def test_recovery_old_format():
-    result = recover.restore_key_and_chaincode(TEST_DIR / "backup_old_format.zip", TEST_DIR / "priv.pem", "Thefireblocks1!")
-    ecdsa_priv_key, ecdsa_chaincode = result['MPC_ECDSA_SECP256K1']
+    result = result_list_to_dict(recover.restore_key_and_chaincode(TEST_DIR / "backup_old_format.zip", TEST_DIR / "priv.pem", "Thefireblocks1!"))
+    ecdsa_priv_key, ecdsa_chaincode, _ = result['MPC_ECDSA_SECP256K1']
 
     assert(ecdsa_priv_key == 0x473d1820ca4bf7cf6b018a8520b1ec0849cb99bce4fff45c5598723f67b3bd52)
     pub = recover.get_public_key("MPC_ECDSA_SECP256K1", ecdsa_priv_key)
@@ -49,9 +56,9 @@ def test_recovery_old_format():
 
 
 def test_cmp_recovery():
-    result = recover.restore_key_and_chaincode(TEST_DIR / "backup_cmp.zip", TEST_DIR / "priv.pem", "Fireblocks1!")
-    ecdsa_priv_key, ecdsa_chaincode = result['MPC_CMP_ECDSA_SECP256K1']
-    eddsa_priv_key, eddsa_chaincode = result['MPC_CMP_EDDSA_ED25519']
+    result = result_list_to_dict(recover.restore_key_and_chaincode(TEST_DIR / "backup_cmp.zip", TEST_DIR / "priv.pem", "Fireblocks1!"))
+    ecdsa_priv_key, ecdsa_chaincode, _ = result['MPC_CMP_ECDSA_SECP256K1']
+    eddsa_priv_key, eddsa_chaincode, _ = result['MPC_CMP_EDDSA_ED25519']
 
     assert(ecdsa_priv_key == 0xf57c18e98a24ca0b36fbbd103233aff128b740426da189ce208545d44bbad050)
     assert(eddsa_priv_key == 0xa536dc2f2d744ae78eb26fdfb4b9e234a649525e0a1142bf900cd9c26987007)
@@ -76,9 +83,9 @@ def test_one_custom_chaincode_recovery():
     Hence all the extracted keys are they same, and differce lies mostly in the extended form of the key,
     which encodes the chaincode. 
     '''
-    result = recover.restore_key_and_chaincode(TEST_DIR / "backup_with_one_custom_chaincode.zip", TEST_DIR / "priv2.pem", "Thefireblocks1!")
-    ecdsa_priv_key, ecdsa_chaincode = result['MPC_ECDSA_SECP256K1']
-    eddsa_priv_key, eddsa_chaincode = result['MPC_EDDSA_ED25519']
+    result = result_list_to_dict(recover.restore_key_and_chaincode(TEST_DIR / "backup_with_one_custom_chaincode.zip", TEST_DIR / "priv2.pem", "Thefireblocks1!"))
+    ecdsa_priv_key, ecdsa_chaincode, _ = result['MPC_ECDSA_SECP256K1']
+    eddsa_priv_key, eddsa_chaincode, _ = result['MPC_EDDSA_ED25519']
 
     assert(ecdsa_chaincode != eddsa_chaincode)
     assert(ecdsa_priv_key == 0x66b1baf063db6e7152480334ebab0ab098e85f682b784754e46c18c962a1aa9d)
@@ -110,9 +117,9 @@ def test_two_custom_chaincode_recovery():
     only the extended forms of the keys are different, as they encode the respective chaincodes.
  
     '''
-    result = recover.restore_key_and_chaincode(TEST_DIR / "backup_with_two_custom_chaincode.zip", TEST_DIR / "priv2.pem", "Thefireblocks1!")
-    ecdsa_priv_key, ecdsa_chaincode = result['MPC_ECDSA_SECP256K1']
-    eddsa_priv_key, eddsa_chaincode = result['MPC_EDDSA_ED25519']
+    result = result_list_to_dict(recover.restore_key_and_chaincode(TEST_DIR / "backup_with_two_custom_chaincode.zip", TEST_DIR / "priv2.pem", "Thefireblocks1!"))
+    ecdsa_priv_key, ecdsa_chaincode, _ = result['MPC_ECDSA_SECP256K1']
+    eddsa_priv_key, eddsa_chaincode, _ = result['MPC_EDDSA_ED25519']
 
     assert(ecdsa_chaincode != eddsa_chaincode)
     assert(ecdsa_priv_key == 0x66b1baf063db6e7152480334ebab0ab098e85f682b784754e46c18c962a1aa9d)
@@ -132,9 +139,9 @@ def test_two_custom_chaincode_recovery():
 
 
 def test_recovery_with_mobile_share_as_json():
-    result = recover.restore_key_and_chaincode(TEST_DIR / "json_share.zip", TEST_DIR / "priv.pem", "Fireblocks1!")
-    ecdsa_priv_key, ecdsa_chaincode = result['MPC_CMP_ECDSA_SECP256K1']
-    eddsa_priv_key, eddsa_chaincode = result['MPC_EDDSA_ED25519']
+    result = result_list_to_dict(recover.restore_key_and_chaincode(TEST_DIR / "json_share.zip", TEST_DIR / "priv.pem", "Fireblocks1!"))
+    ecdsa_priv_key, ecdsa_chaincode, _ = result['MPC_CMP_ECDSA_SECP256K1']
+    eddsa_priv_key, eddsa_chaincode, _ = result['MPC_EDDSA_ED25519']
 
     assert(ecdsa_priv_key == 0x83af98f2f2bdea33eb34177b311d89569725a401c1fc4d6046d266b1ca0dc382)
     assert(eddsa_priv_key == 0xd5c4d44f0f07aaa0bf18e039f28ec2131935ed696636f48ec46bab58e66296b)
@@ -153,9 +160,9 @@ def test_recovery_with_mobile_share_as_json():
 
 
 def test_recovery_with_master_keys():
-    result = recover.restore_key_and_chaincode(TEST_DIR / "backup_with_master_key.zip", TEST_DIR / "priv_ncw.pem", "2#0Iw0Qov@&QP09p", key_pass="SECRET")
-    ecdsa_priv_key, ecdsa_chaincode = result["MPC_CMP_ECDSA_SECP256K1"]
-    eddsa_priv_key, eddsa_chaincode = result["MPC_EDDSA_ED25519"]
+    result = result_list_to_dict(recover.restore_key_and_chaincode(TEST_DIR / "backup_with_master_key.zip", TEST_DIR / "priv_ncw.pem", "2#0Iw0Qov@&QP09p", key_pass="SECRET"))
+    ecdsa_priv_key, ecdsa_chaincode, _ = result["MPC_CMP_ECDSA_SECP256K1"]
+    eddsa_priv_key, eddsa_chaincode, _ = result["MPC_EDDSA_ED25519"]
 
     pub = recover.get_public_key("MPC_ECDSA_SECP256K1", ecdsa_priv_key)
     assert pub == "033f5e4fb621e4cc777e5b9cdc0ef06c7b55042e9ce6c3bf013daab9fba29b37b8"

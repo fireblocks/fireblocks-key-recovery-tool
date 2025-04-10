@@ -115,16 +115,16 @@ Are you sure you want to show the extended private key of the Vault?
 Be sure you are in a private location and no one can see your screen.'''
         , default = "no")
 
-    for algo, info in privkeys.items():
+    for algo, privkey, chaincode, keyset_id in privkeys:
         # info may be either None or tuple
-        if info:
-            privkey, chaincode = info
+        if privkey:
+            keyset_id_str = " - Key Set " + str(keyset_id)
             pub = recover.get_public_key(algo, privkey)
             if show_xprv:
-                print(privkey_descriptions[algo] + ":\t" + recover.encode_extended_key(algo, privkey, chaincode, False))
-            print(pubkey_descriptions[algo] + ":\t%s\t%s" % (recover.encode_extended_key(algo, pub, chaincode, True), colored("Verified!","green")))
+                print(privkey_descriptions[algo] + keyset_id_str + ":\t" + recover.encode_extended_key(algo, privkey, chaincode, False))
+            print(pubkey_descriptions[algo] + keyset_id_str + ":\t%s\t%s" % (recover.encode_extended_key(algo, pub, chaincode, True), colored("Verified!","green")))
         else:
-            print(pubkey_descriptions[algo] + ":\t%s" % (colored("Verification failed","red")))
+            print(pubkey_descriptions[algo] + keyset_id_str + ":\t%s" % (colored("Verification failed","red")))
 
 if __name__ == "__main__" :
     main()

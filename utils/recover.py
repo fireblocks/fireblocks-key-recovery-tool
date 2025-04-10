@@ -150,7 +150,7 @@ def calculate_keys(key_id, player_to_data, algo):
         raise RecoveryErrorUnknownAlgorithm(algo)
 
 def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=None, mobile_key_pem_path = None, mobile_key_pass = None):
-    privkeys = {}
+    privkeys = []
     players_data = defaultdict(dict)
     signing_keys = {}
 
@@ -237,9 +237,9 @@ def restore_key_and_chaincode(zip_path, private_pem_path, passphrase, key_pass=N
         pub_from_metadata = signing_keys[key_id].public_key
         if pub_from_metadata != pubkey_str:
             print(f"Failed to recover {algo} key, expected public key is: {pub_from_metadata} calculated public key is: {pubkey_str}")
-            privkeys[algo] = None
+            privkeys.append((algo, None, None, None))
         else:
-            privkeys[algo] = privkey, chain_code_for_this_key
+            privkeys.append((algo, privkey, chain_code_for_this_key, signing_keys[key_id].keyset_id))
 
     if len(privkeys) == 0:
         raise RecoveryErrorPublicKeyNoMatch()
