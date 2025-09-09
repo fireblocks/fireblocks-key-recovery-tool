@@ -1,5 +1,6 @@
 FROM python:3.9.16-slim-buster
 
+COPY sources.list /etc/apt/sources.list
 COPY requirements.txt /opt/
 
 RUN  set -ex \
